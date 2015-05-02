@@ -1,0 +1,31 @@
+Data Coding:
+
+I wrote a number in the lower right-hand corner of the front page to use as an “ID” number for each survey and entered results by respondent. 
+
+Data for 212 total surveys entered with the following coding:
+
+Questions 1-12: 1=not at all, 2=to a slight extent, 3=to a moderate extent, 4=to a great extent, 5=to a very great extent
+
+Question 13: 0= no, 1=yes
+
+Question 14: 1=would not use, 2=would use, 3=did use
+
+Question 15: 1=strongly disagree, 2=disagree, 3=uncertain, 4=agree, 5=strongly agree
+
+Questions 16-25: 1=not at all, 2=not very comfortable, 3=neither comfortable nor uncomfortable, 4=comfortable, 5=very comfortable 
+
+Question 26: 1=23 or younger, 2=24-25, 3=26 or older
+
+Question 27: 0=male, 1=female
+
+Question 28.1: 0=no, 1=yes
+
+Question 28.2: 1=MS1, 2=MS2, 3=MS3, 4=MS4
+
+Question 29.1: 0=no, 1=yes
+
+Question 29.2: 1=MD/PhD, 2=MD/MPH, 3=MD/MSCR
+
+Question 30.1: 0=no, 1=yes, 2=Don’t Know
+
+Question 30.2: 1=Clinical, 2=Translational, 3=Basic Science, 4=Don’t Know (multiple answers were allowed here, e.g. clinical and translational = 12)
