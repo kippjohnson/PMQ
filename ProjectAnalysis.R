@@ -1,5 +1,79 @@
-
 ## Attitudes Toward Personalized Genomics Testing Data Analysis
+library(plyr)
+library(psych)
+rm(list=ls())
+
+sums <- function(somevector){
+  n <- length(somevector)
+  xbar <- mean(somevector)
+  s <- sd(somevector)
+  mn <- min(somevector)
+  mx <- max(somevector)
+
+  return(c(n, xbar, s, mn, mx))
+}
+
+# Read in data from Github
 tmp=tempfile()
 download.file("https://raw.githubusercontent.com/kippjohnson/PMQ/master/SurveyResponses.csv", destfile=tmp, method="curl")
-read.csv(tmp,header=TRUE)
+infile = read.csv(tmp,header=TRUE)
+
+### Compute Demographic Information
+# Q26 = Age range
+table(infile$Q26)
+
+# Q27 = Gender
+table(infile$Q27)
+table(infile$Q27, exclude=NULL)
+
+# Q28.2 = year of medical school
+table(infile$Q28.2)
+
+# Q29.1 = dual degree program? (1=yes)
+table(infile$Q29.1)
+
+# Q30.1 = research interest (1=yes)
+table(infile$Q30.1)
+
+### Space to print a demographics table
+
+#Because questions 2,4,5,6 and reversed on our likert scale, we need to convert them back to have
+# the same meaning (i.e., change 5-->1 , 3-->3, and 1-->5)
+divergence_corrected <- data.frame(c( abs( infile[,c(3,5,6,9)])))
+infile1 <- data.frame(c(infile[,c(2,4,7,8,10,11,12,13)] ,divergence_corrected))
+
+### Compute EBPAS Scores
+# First, add a column with the total EBPAS Score
+# This is calculated by summing the first 12 questions
+infile2 <- mutate(infile1, EBPAS = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
+length(which(is.na(infile2$EBPAS))) # There are 18 people who did not completely fill out the survey
+
+#Generate a new file (infile3), completely dropping those observations who did not fill out the entirety of Questions 1-12
+infile3 <- infile2[-which(is.na(infile2$EBPAS)),]
+infile3 <- mutate(infile3, openness = Q1+Q7+Q10+Q12)
+infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
+infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
+
+# Calculate N, Mean, SD, Min, Max for EBPAS questions, and for subsets
+EBPASstats <- sums(infile3$EBPAS)
+opennessstats <- sums(infile3$openness)
+divergencestats <- sums(infile3$divergence)
+educationstats <- sums(infile3$education)
+
+# Compute Cronbach's alpha for each subset of EBPAS
+# Note: EBPAS alpha value is taken from Overby et al., J Pers. Med. 2014
+EBPAS_alpha <- 0.78
+openness_alpha <- alpha(infile3[,c("Q1","Q7","Q10","Q12")]) # alpha=0.81
+divergence_alpha <- alpha(infile3[,c("Q2","Q4","Q5","Q8")]) # alpha=0.55
+education_alpha <- alpha(infile3[,c("Q3","Q6","Q9","Q11")]) # alpha=0.53
+
+EBPASstats <- c(EBPASstats, EBPAS_alpha)
+opennessstats <- c(opennessstats, openness_alpha$total[[1]])
+divergencestats <- c(divergencestats, divergence_alpha$total[[1]])
+educationstats <- c(educationstats, education_alpha$total[[1]])
+
+### Print a Table with these results
+EBPAStable <- t(data.frame(EBPASstats,educationstats, divergencestats, educationstats))
+colnames(EBPAStable)  <- c("N","Mean","SD","Min","Max","Alpha")
+rownames(EBPAStable) <- c("EBPAS", "education", "divergence","openness")
+kable(EBPAStable)

@@ -5,6 +5,12 @@ date: "May 4, 2015"
 output: html_document
 ---
 
+Begin by calling packages which will be used later in the report:
+```{r, error=FALSE,warning=FALSE,autodep=FALSE,collapse=TRUE,message=FALSE}
+library(knitr)
+library(psych)
+```
+
 Reading in the data from my Github:
 ```{r, results='hide'}
 tmp <- tempfile()
@@ -12,5 +18,66 @@ download.file("https://raw.githubusercontent.com/kippjohnson/PMQ/master/SurveyRe
 infile <- read.csv(tmp,header=TRUE)
 ```
 
-We have `r dim(infile)[1]` observations, with `r dim(infile)[2]-1` possible variables per observation.
+The first step is to compute EBPAS total score, along with its subsets for scores of openness, divergence, and education. Questions 1-12 define the EBPAS scale on the survey, with its three subsets of openness, divergence, and education. There are a number of people who did not completely fill out the first 12 questions of the survey, and for this analysis they will be dropped.
+
+```{r, echo=FALSE}
+infile2 <- mutate(infile, EBPAS = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
+infile3 <- infile2[-which(is.na(infile2$EBPAS)),]
+```
+
+Number of people who did not correctly fill out the survey: **`r length(which(is.na(infile2$EBPAS)))`**. We will drop all of these individuals from the rest of the study.
+
+The code to generate new columns in infile3 with EBPAS and its subset scores:
+```{r}
+infile2 <- mutate(infile, EBPAS = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
+infile3 <- mutate(infile3, openness = Q1+Q7+Q10+Q12)
+infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
+infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
+```
+
+Computing Crohnbach's Alpha: We use the alpha() function from the psych package in R. The EBPAS cronbach's alpha is taken from the literature (Overby et al., J Pers. Med. 2014), as was done in the paper we are modeling this from.
+
+```{r, echo=FALSE}
+sums <- function(somevector){
+  n <- length(somevector)
+  xbar <- mean(somevector)
+  s <- sd(somevector)
+  mn <- min(somevector)
+  mx <- max(somevector)
+  ran <- mx - mn
+
+  return(c(n, xbar, s, mn, mx, ran))
+}
+
+```
+
+
+```{r}
+
+EBPASstats <- sums(infile3$EBPAS)
+opennessstats <- sums(infile3$openness)
+divergencestats <- sums(infile3$divergence)
+educationstats <- sums(infile3$education)
+
+#EBPAS_alpha <- 0.78
+  div_corrected <- abs(infile3[,c(3,5,6,9)] - 6)
+EBPAS_alpha <- alpha(infile3[,c(2,4,7,8,10,11,12,13,div_corrected)])
+
+openness_alpha <- alpha(infile3[,c("Q1","Q7","Q10","Q12")]) # alpha=081
+divergence_alpha <- alpha(infile3[,c("Q2","Q4","Q5","Q8")]) # alpha=0.55
+education_alpha <- alpha(infile3[,c("Q3","Q6","Q9","Q11")]) # alpha=0.53
+
+EBPASstats <- c(EBPASstats, EBPAS_alpha)
+opennessstats <- c(opennessstats, openness_alpha$total[[1]])
+divergencestats <- c(divergencestats, divergence_alpha$total[[1]])
+educationstats <- c(educationstats, education_alpha$total[[1]])
+
+EBPAStable <- t(data.frame(EBPASstats,educationstats, divergencestats, opennessstats))
+colnames(EBPAStable)  <- c("N","Mean","SD","Min","Max","Range","Alpha")
+rownames(EBPAStable) <- c("EBPAS", "education", "divergence","openness")
+
+```
+
+## EBPAS Table
+`r kable(EBPAStable)`
 
