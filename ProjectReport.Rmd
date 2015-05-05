@@ -109,27 +109,345 @@ rownames(EBPAStable) <- c("EBPAS", "education", "divergence","openness")
 
 `r kable(EBPAStable, digits=3)`
 
-### Remaining Analysis Plan
-
+##  Analysis Plan
 #### Step 1: Frequencies
 
-Calculate frequencies of medical student characteristics
+*Question Response Frequencies*: Tables of each question's (13-25) response frequency. These questions include:
 
-Includes:
+* Attitudes toward DTC (13-15)
+* Comfort using technology (16, 17)
+* Knowledge of genomic testing concepts (18-21)
+* Ability to understand genomic testing concepts (22-25)
 
-* Attitudes toward PGT testing
-* Education
-* Attitudes toward DTC
-* Comfort using technology
-* Knowledge of genomic testing concepts
-* Ability to understand genomic testing concepts
+```{r, echo=FALSE}
 
+kable(data.frame(table(infile$Q13)),col.names=c("Question 13", "Frequency")) # Have heard of DTC: 50 no, 101 yes
+kable(data.frame(table(infile$Q14)),col.names=c("Question 14", "Frequency")) # Would use DTC: 73 would not use, 121 would use, 9 did use
+kable(data.frame(table(infile$Q15)),col.names=c("Question 15", "Frequency")) # Can interpret DTC: 35 str. disagree, 30 dis, 72 uncertain, 58 agree, 14 str. agree
+kable(data.frame(table(infile$Q16)),col.names=c("Question 16", "Frequency")) # Vast majority comfortable with computers
+kable(data.frame(table(infile$Q17)),col.names=c("Question 17", "Frequency")) # Comfort with using EPIC
 
-*Also calculate these by covariate?*
+kable(data.frame(table(infile$Q18)),col.names=c("Question 18", "Frequency")) # Comfort with basic genomic testing concepts and terminology
+kable(data.frame(table(infile$Q19)),col.names=c("Question 19", "Frequency")) # Comfort with pharmacogenomics knowledge
+kable(data.frame(table(infile$Q20)),col.names=c("Question 20", "Frequency")) # Comfort with knowledge about genetic variation
+kable(data.frame(table(infile$Q21)),col.names=c("Question 21", "Frequency")) # Comfort with knolwedge about NGS
+
+kable(data.frame(table(infile$Q22)),col.names=c("Question 22", "Frequency")) # Ability to recommend genetic testing
+kable(data.frame(table(infile$Q23)),col.names=c("Question 23", "Frequency")) # Ability to understand genomic test results
+kable(data.frame(table(infile$Q24)),col.names=c("Question 24", "Frequency")) # Ability to explain genomic test results to patients
+kable(data.frame(table(infile$Q25)),col.names=c("Question 25", "Frequency")) # Ability to make treatment recommendations based upon genomic test results
+```
+
+*Should we also calculate these frequencies by covariate?*
 
 #### Step 2: T-Tests
 
-Collapse predictors listed in Step 1 into binary categories and conduct T-tests of them vs. EBPAS-GI score.
+Answers for questions 13-15 were tested for an association with EBPAS Score (Questions 1-12) using ANOVA followed by Tukey Honest Signficant Differences. ANOVA+Tukey Results are not currently shown in the table following the code output.
+
+Second, the answers were collapsed into binary categories and T-tests for association with EBPAS score were performed.
+
+##### Question 13
+```{r Q13, echo=FALSE}
+### Q13
+#Q13 T-test
+t.test(infile3$EBPAS ~ infile3$Q13) #NS
+boxplot(EBPAS ~ Q13, data=infile3)
+```
+
+##### Question 14
+```{r Q14, echo=FALSE}
+### Q14
+#Q14 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q14))) #NS
+  TukeyHSD(aov(infile3$EBPAS~ as.factor(infile3$Q14)))
+  boxplot(EBPAS ~ Q14, data=infile3)
+
+#Q14 Collapsed t-test
+infile3$Q14c <- infile3$Q14
+infile3$Q14c[infile3$Q14c==3] <- 2
+t.test(infile3$EBPAS ~ infile3$Q14c) # Significant
+CT14 <- t.test(infile3$EBPAS ~ infile3$Q14c) # Significant)
+
+s14 <- ddply(infile3, ~infile3$Q14c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+##### Question 15
+```{r Q15, echo=FALSE}
+
+### Q15
+# Q15 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q15))) #significant
+  TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q15)))
+  boxplot(EBPAS ~ Q15, data=infile3)
+
+#Q15 Collapsed t-test
+infile3$Q15c <- infile3$Q15
+infile3$Q15c[infile3$Q15c==2] <- 1
+infile3$Q15c[infile3$Q15c==3] <- 1
+#infile3$Q15c[infile3$Q15c==3] <- 2
+infile3$Q15c[infile3$Q15c==4] <- 2
+infile3$Q15c[infile3$Q15c==5] <- 2
+
+table(infile3$Q15)
+table(infile3$Q15c)
+t.test(infile3$EBPAS ~ infile3$Q15c) #Significant Note: depends upon assignment of category 3
+CT15 <- t.test(infile3$EBPAS ~ infile3$Q15c) # Significant)
+
+s15 <- ddply(infile3, ~infile3$Q15c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+##### Question 16
+```{r Q16, echo=FALSE}
+### Q16
+#Q16 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q16))) #significant
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q16)))
+boxplot(EBPAS ~ Q16, data=infile3)
+
+#Q16 Collapsed t-test
+infile3$Q16c <- infile3$Q16
+infile3$Q16c[infile3$Q16c==2] <- 1
+infile3$Q16c[infile3$Q16c==3] <- 1
+infile3$Q16c[infile3$Q16c==4] <- 2
+infile3$Q16c[infile3$Q16c==5] <- 2
+
+table(infile3$Q16)
+table(infile3$Q16c)
+t.test(infile3$EBPAS ~ infile3$Q16c) # NS
+CT16 <- t.test(infile3$EBPAS ~ infile3$Q16c) # Significant)
+s16 <- ddply(infile3, ~infile3$Q16c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+##### Question 17
+```{r Q17, echo=FALSE}
+
+### Q17
+#Q17 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q17)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q17)))
+boxplot(EBPAS ~ Q17, data=infile3)
+
+#Q17 Collapsed t-test
+infile3$Q17c <- infile3$Q17
+infile3$Q17c[infile3$Q17c==2] <- 1
+infile3$Q17c[infile3$Q17c==3] <- 1
+infile3$Q17c[infile3$Q17c==4] <- 2
+infile3$Q17c[infile3$Q17c==5] <- 2
+
+table(infile3$Q17)
+table(infile3$Q17c)
+t.test(infile3$EBPAS ~ infile3$Q17c) # NS
+CT17 <- t.test(infile3$EBPAS ~ infile3$Q17c) # Significant)
+s17 <- ddply(infile3, ~infile3$Q17c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+##### Question 18
+```{r Q18, echo=FALSE}
+### Q18
+#Q18 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q18)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q18)))
+boxplot(EBPAS ~ Q18, data=infile3)
+
+#Q18 Collapsed t-test
+infile3$Q18c <- infile3$Q18
+table(infile3$Q18)
+
+infile3$Q18c[infile3$Q18c==2] <- 1
+infile3$Q18c[infile3$Q18c==3] <- 1
+infile3$Q18c[infile3$Q18c==4] <- 2
+infile3$Q18c[infile3$Q18c==5] <- 2
+
+table(infile3$Q18c)
+t.test(infile3$EBPAS ~ infile3$Q18c) # Significant
+CT18 <- t.test(infile3$EBPAS ~ infile3$Q18c) # Significant)
+s18 <- ddply(infile3, ~infile3$Q18c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+##### Question 19
+```{r Q19, echo=FALSE}
+### Q19
+#Q19 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q19)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q19)))
+boxplot(EBPAS ~ Q19, data=infile3)
+
+#Q19 Collapsed t-test
+infile3$Q19c <- infile3$Q19
+table(infile3$Q19)
+
+infile3$Q19c[infile3$Q19c==2] <- 1
+infile3$Q19c[infile3$Q19c==3] <- 1
+infile3$Q19c[infile3$Q19c==4] <- 2
+infile3$Q19c[infile3$Q19c==5] <- 2
+
+table(infile3$Q19c)
+t.test(infile3$EBPAS ~ infile3$Q19c) # Significant
+CT19 <- t.test(infile3$EBPAS ~ infile3$Q19c) # Significant)
+s19 <- ddply(infile3, ~infile3$Q19c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+##### Question 120
+```{r Q20, echo=FALSE}
+
+### Q20
+#Q20 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q20)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q20)))
+boxplot(EBPAS ~ Q20, data=infile3)
+
+#Q20 Collapsed t-test
+infile3$Q20c <- infile3$Q20
+table(infile3$Q20)
+
+infile3$Q20c[infile3$Q20c==2] <- 1
+infile3$Q20c[infile3$Q20c==3] <- 1
+infile3$Q20c[infile3$Q20c==4] <- 2
+infile3$Q20c[infile3$Q20c==5] <- 2
+
+table(infile3$Q20c)
+t.test(infile3$EBPAS ~ infile3$Q20c) # Significant
+CT20 <- t.test(infile3$EBPAS ~ infile3$Q20c) # Significant)
+s20 <- ddply(infile3, ~infile3$Q20c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+##### Question 21
+```{r Q21, echo=FALSE}
+
+### Q21
+#Q21 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q21)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q21)))
+boxplot(EBPAS ~ Q21, data=infile3)
+
+#Q21 Collapsed t-test
+infile3$Q21c <- infile3$Q21
+table(infile3$Q21)
+
+infile3$Q21c[infile3$Q21c==2] <- 1
+infile3$Q21c[infile3$Q21c==3] <- 1
+infile3$Q21c[infile3$Q21c==4] <- 2
+infile3$Q21c[infile3$Q21c==5] <- 2
+
+table(infile3$Q21c)
+t.test(infile3$EBPAS ~ infile3$Q21c) # Significant)
+CT21 <- t.test(infile3$EBPAS ~ infile3$Q21c) # Significant)
+s21 <- ddply(infile3, ~infile3$Q21c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+##### Question 22
+```{r Q22, echo=FALSE}
+### Q22
+#Q22 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q22)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q22)))
+boxplot(EBPAS ~ Q22, data=infile3)
+
+#Q22 Collapsed t-test
+infile3$Q22c <- infile3$Q22
+table(infile3$Q22)
+
+infile3$Q22c[infile3$Q22c==2] <- 1
+infile3$Q22c[infile3$Q22c==3] <- 1
+infile3$Q22c[infile3$Q22c==4] <- 2
+infile3$Q22c[infile3$Q22c==5] <- 2
+
+table(infile3$Q22c)
+t.test(infile3$EBPAS ~ infile3$Q22c) # Significant)
+CT22 <- t.test(infile3$EBPAS ~ infile3$Q22c) # Significant)
+s22 <- ddply(infile3, ~infile3$Q22c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+##### Question 23
+```{r Q23, echo=FALSE}
+
+### Q23
+#Q23 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q23)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q23)))
+boxplot(EBPAS ~ Q23, data=infile3)
+
+#Q23 Collapsed t-test
+infile3$Q23c <- infile3$Q23
+table(infile3$Q23)
+
+infile3$Q23c[infile3$Q23c==2] <- 1
+infile3$Q23c[infile3$Q23c==3] <- 1
+infile3$Q23c[infile3$Q23c==4] <- 2
+infile3$Q23c[infile3$Q23c==5] <- 2
+
+table(infile3$Q23c)
+t.test(infile3$EBPAS ~ infile3$Q23c) # Significant)
+CT23 <- t.test(infile3$EBPAS ~ infile3$Q23c) # Significant)
+s23 <- ddply(infile3, ~infile3$Q23c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+##### Question 24
+```{r Q24, echo=FALSE}
+
+### Q24
+#Q24 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q24)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q24)))
+boxplot(EBPAS ~ Q24, data=infile3)
+
+#Q24 Collapsed t-test
+infile3$Q24c <- infile3$Q24
+table(infile3$Q24)
+
+infile3$Q24c[infile3$Q24c==2] <- 1
+infile3$Q24c[infile3$Q24c==3] <- 1
+infile3$Q24c[infile3$Q24c==4] <- 2
+infile3$Q24c[infile3$Q24c==5] <- 2
+
+table(infile3$Q24c)
+t.test(infile3$EBPAS ~ infile3$Q24c) # Significant)
+CT24 <- t.test(infile3$EBPAS ~ infile3$Q24c) # Significant)
+s24 <- ddply(infile3, ~infile3$Q24c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+##### Question 25
+```{r Q25, echo=FALSE}
+
+### Q25
+#Q25 ANOVA
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q25)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q25)))
+boxplot(EBPAS ~ Q25, data=infile3)
+
+#Q25 Collapsed t-test
+infile3$Q25c <- infile3$Q25
+table(infile3$Q25)
+
+infile3$Q25c[infile3$Q25c==2] <- 1
+infile3$Q25c[infile3$Q25c==3] <- 1
+infile3$Q25c[infile3$Q25c==4] <- 2
+infile3$Q25c[infile3$Q25c==5] <- 2
+
+table(infile3$Q25c)
+t.test(infile3$EBPAS ~ infile3$Q25c) # Significant)
+CT25 <- t.test(infile3$EBPAS ~ infile3$Q25c) # Significant)
+s25 <- ddply(infile3, ~infile3$Q25c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+```
+
+#### Summary table of Results from Collapsed T test
+```{r, echo=FALSE}
+
+#q13 <- c("Question 13", 
+        
+```
 
 #### Step 3: Linear Regression
 

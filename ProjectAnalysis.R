@@ -123,7 +123,6 @@ table(infile$Q25) # Ability to make treatment recommendations based upon genomic
 
 
 ### T Tests / ANOVAs
-
 ### Q13
 #Q13 T-test
 t.test(infile3$EBPAS ~ infile3$Q13) #NS
@@ -131,8 +130,8 @@ t.test(infile3$EBPAS ~ infile3$Q13) #NS
 ### Q14
 #Q14 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q14))) #NS
-  TukeyHSD(aov(infile3$EBPAS~ as.factor(infile3$Q14)))
-  boxplot(EBPAS ~ Q14, data=infile3)
+TukeyHSD(aov(infile3$EBPAS~ as.factor(infile3$Q14)))
+boxplot(EBPAS ~ Q14, data=infile3)
 
 #Q14 Collapsed t-test
 infile3$Q14c <- infile3$Q14
@@ -140,12 +139,14 @@ infile3$Q14c[infile3$Q14c==3] <- 2
 t.test(infile3$EBPAS ~ infile3$Q14c) # Significant
 CT14 <- t.test(infile3$EBPAS ~ infile3$Q14c) # Significant)
 
+s14 <- ddply(infile3, ~infile3$Q14c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
 
 ### Q15
 # Q15 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q15))) #significant
-  TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q15)))
-  boxplot(EBPAS ~ Q15, data=infile3)
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q15)))
+boxplot(EBPAS ~ Q15, data=infile3)
 
 #Q15 Collapsed t-test
 infile3$Q15c <- infile3$Q15
@@ -159,6 +160,9 @@ table(infile3$Q15)
 table(infile3$Q15c)
 t.test(infile3$EBPAS ~ infile3$Q15c) #Significant Note: depends upon assignment of category 3
 CT15 <- t.test(infile3$EBPAS ~ infile3$Q15c) # Significant)
+
+s15 <- ddply(infile3, ~infile3$Q15c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
 
 ### Q16
 #Q16 ANOVA
@@ -177,6 +181,7 @@ table(infile3$Q16)
 table(infile3$Q16c)
 t.test(infile3$EBPAS ~ infile3$Q16c) # NS
 CT16 <- t.test(infile3$EBPAS ~ infile3$Q16c) # Significant)
+s16 <- ddply(infile3, ~infile3$Q16c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
 
 ### Q17
 #Q17 ANOVA
@@ -195,6 +200,7 @@ table(infile3$Q17)
 table(infile3$Q17c)
 t.test(infile3$EBPAS ~ infile3$Q17c) # NS
 CT17 <- t.test(infile3$EBPAS ~ infile3$Q17c) # Significant)
+s17 <- ddply(infile3, ~infile3$Q17c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
 
 ### Q18
 #Q18 ANOVA
@@ -214,6 +220,7 @@ infile3$Q18c[infile3$Q18c==5] <- 2
 table(infile3$Q18c)
 t.test(infile3$EBPAS ~ infile3$Q18c) # Significant
 CT18 <- t.test(infile3$EBPAS ~ infile3$Q18c) # Significant)
+s18 <- ddply(infile3, ~infile3$Q18c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
 
 ### Q19
 #Q19 ANOVA
@@ -233,6 +240,7 @@ infile3$Q19c[infile3$Q19c==5] <- 2
 table(infile3$Q19c)
 t.test(infile3$EBPAS ~ infile3$Q19c) # Significant
 CT19 <- t.test(infile3$EBPAS ~ infile3$Q19c) # Significant)
+s19 <- ddply(infile3, ~infile3$Q19c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
 
 ### Q20
 #Q20 ANOVA
@@ -252,6 +260,7 @@ infile3$Q20c[infile3$Q20c==5] <- 2
 table(infile3$Q20c)
 t.test(infile3$EBPAS ~ infile3$Q20c) # Significant
 CT20 <- t.test(infile3$EBPAS ~ infile3$Q20c) # Significant)
+s20 <- ddply(infile3, ~infile3$Q20c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
 
 ### Q21
 #Q21 ANOVA
@@ -271,6 +280,8 @@ infile3$Q21c[infile3$Q21c==5] <- 2
 table(infile3$Q21c)
 t.test(infile3$EBPAS ~ infile3$Q21c) # Significant)
 CT21 <- t.test(infile3$EBPAS ~ infile3$Q21c) # Significant)
+s21 <- ddply(infile3, ~infile3$Q21c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
 
 ### Q22
 #Q22 ANOVA
@@ -290,6 +301,7 @@ infile3$Q22c[infile3$Q22c==5] <- 2
 table(infile3$Q22c)
 t.test(infile3$EBPAS ~ infile3$Q22c) # Significant)
 CT22 <- t.test(infile3$EBPAS ~ infile3$Q22c) # Significant)
+s22 <- ddply(infile3, ~infile3$Q22c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
 
 ### Q23
 #Q23 ANOVA
@@ -309,6 +321,7 @@ infile3$Q23c[infile3$Q23c==5] <- 2
 table(infile3$Q23c)
 t.test(infile3$EBPAS ~ infile3$Q23c) # Significant)
 CT23 <- t.test(infile3$EBPAS ~ infile3$Q23c) # Significant)
+s23 <- ddply(infile3, ~infile3$Q23c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
 
 ### Q24
 #Q24 ANOVA
@@ -328,6 +341,7 @@ infile3$Q24c[infile3$Q24c==5] <- 2
 table(infile3$Q24c)
 t.test(infile3$EBPAS ~ infile3$Q24c) # Significant)
 CT24 <- t.test(infile3$EBPAS ~ infile3$Q24c) # Significant)
+s24 <- ddply(infile3, ~infile3$Q24c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
 
 ### Q25
 #Q25 ANOVA
@@ -336,7 +350,7 @@ TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q25)))
 boxplot(EBPAS ~ Q25, data=infile3)
 
 #Q25 Collapsed t-test
-infile3$Q54c <- infile3$Q25
+infile3$Q25c <- infile3$Q25
 table(infile3$Q25)
 
 infile3$Q25c[infile3$Q25c==2] <- 1
@@ -347,4 +361,5 @@ infile3$Q25c[infile3$Q25c==5] <- 2
 table(infile3$Q25c)
 t.test(infile3$EBPAS ~ infile3$Q25c) # Significant)
 CT25 <- t.test(infile3$EBPAS ~ infile3$Q25c) # Significant)
+s25 <- ddply(infile3, ~infile3$Q25c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
 
