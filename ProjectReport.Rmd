@@ -1,8 +1,8 @@
 ---
-title: "PMQ Report"
+title: "Medical Student Attitude Toward Personalized Medicine Report"
 author: "Kipp Johnson"
 date: "May 4, 2015"
-output: html_document
+output: word_document
 ---
 
 Begin by calling packages which will be used later in the report:
@@ -11,31 +11,58 @@ library(knitr)
 library(psych)
 ```
 
-Reading in the data from my Github:
+Reading in the data from the Github Repository (/kippjohnson/PMQ):
 ```{r, results='hide'}
 tmp <- tempfile()
 download.file("https://raw.githubusercontent.com/kippjohnson/PMQ/master/SurveyResponses.csv", destfile=tmp, method="curl")
 infile <- read.csv(tmp,header=TRUE)
 ```
 
+### Demographics
+```{r, echo=FALSE}
+nMales = table(infile$Q27)[[1]]
+nFemales = table(infile$Q27)[[2]]
+nNoSex = table(infile$Q27,exclude=NULL)[[3]]
+
+nMS1 = table(infile$Q28.2)[[1]]
+nMS2 = table(infile$Q28.2)[[2]]
+nMS3 = table(infile$Q28.2)[[3]]
+nMS4 = table(infile$Q28.2)[[4]]
+nMSNone = table(infile$Q28.2,exclude=NULL)[[5]]
+
+nDual = table(infile$Q29.1)[[1]]
+nResearch = table(infile$Q30.1)[[1]]
+
+demog <-  data.frame(c(nMales,nFemales,nNoSex,nMS1,nMS2,nMS3,nMS4,nMSNone,nDual,nResearch))
+colnames(demog) <- "Number of Students"
+row.names(demog) <- c("Male","Female","No Sex Given","MS1","MS2","MS3","MS4","No Year Given","Total Dual Degree","Total with Research Interest")
+
+demog <- mutate(demog, PercentTotal = demog[,1] / 212)
+
+kable(demog, digits=2)
+```
+
+
+### EBPAS Statistics
 The first step is to compute EBPAS total score, along with its subsets for scores of openness, divergence, and education. Questions 1-12 define the EBPAS scale on the survey, with its three subsets of openness, divergence, and education. There are a number of people who did not completely fill out the first 12 questions of the survey, and for this analysis they will be dropped.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE }
 infile2 <- mutate(infile, EBPAS = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
 infile3 <- infile2[-which(is.na(infile2$EBPAS)),]
 ```
 
-Number of people who did not correctly fill out the survey: **`r length(which(is.na(infile2$EBPAS)))`**. We will drop all of these individuals from the rest of the study.
+Number of people who did not completely fill out the first 12 questions of the survey: **`r length(which(is.na(infile2$EBPAS)))`**
 
-The code to generate new columns in infile3 with EBPAS and its subset scores:
-```{r}
+We will drop all of these individuals from the rest of the study? *_This is something which should be discussed_*
+
+```{r, echo=FALSE}
 infile2 <- mutate(infile, EBPAS = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
 infile3 <- mutate(infile3, openness = Q1+Q7+Q10+Q12)
 infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
 infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
 ```
 
-Computing Crohnbach's Alpha: We use the alpha() function from the psych package in R. The EBPAS cronbach's alpha is taken from the literature (Overby et al., J Pers. Med. 2014), as was done in the paper we are modeling this from.
+Computing Crohnbach's Alpha: We use the alpha() function from the psych package in R. The EBPAS cronbach's alpha is taken from the literature (Overby et al., J Pers. Med. 2014), as was done in the paper on which we are modeling this.
 
 ```{r, echo=FALSE}
 sums <- function(somevector){
@@ -48,20 +75,18 @@ sums <- function(somevector){
 
   return(c(n, xbar, s, mn, mx, ran))
 }
-
 ```
 
 
-```{r}
-
+```{r, echo=FALSE, warning=FALSE}
 EBPASstats <- sums(infile3$EBPAS)
 opennessstats <- sums(infile3$openness)
 divergencestats <- sums(infile3$divergence)
 educationstats <- sums(infile3$education)
 
-#EBPAS_alpha <- 0.78
-  div_corrected <- abs(infile3[,c(3,5,6,9)] - 6)
-EBPAS_alpha <- alpha(infile3[,c(2,4,7,8,10,11,12,13,div_corrected)])
+EBPAS_alpha <- 0.78
+#div_corrected <- abs(infile3[,c(3,5,6,9)] - 6)
+#EBPAS_alpha <- alpha(infile3[,c(2,4,7,8,10,11,12,13,div_corrected)])
 
 openness_alpha <- alpha(infile3[,c("Q1","Q7","Q10","Q12")]) # alpha=081
 divergence_alpha <- alpha(infile3[,c("Q2","Q4","Q5","Q8")]) # alpha=0.55
@@ -75,9 +100,49 @@ educationstats <- c(educationstats, education_alpha$total[[1]])
 EBPAStable <- t(data.frame(EBPASstats,educationstats, divergencestats, opennessstats))
 colnames(EBPAStable)  <- c("N","Mean","SD","Min","Max","Range","Alpha")
 rownames(EBPAStable) <- c("EBPAS", "education", "divergence","openness")
-
 ```
 
-## EBPAS Table
-`r kable(EBPAStable)`
+`r kable(EBPAStable, digits=3)`
+
+### Remaining Analysis Plan
+
+#### Step 1: Frequencies
+
+Calculate frequencies of medical student characteristics
+
+Includes:
+
+* Attitudes toward PGT testing
+* Education
+* Attitudes toward DTC
+* Comfort using technology
+* Knowledge of genomic testing concepts
+* Ability to understand genomic testing concepts
+
+*Also calculate these by covariate?*
+
+#### Step 2: T-Tests
+
+Collapse predictors listed in Step 1 into binary categories and conduct T-tests of them vs. EBPAS-GI score.
+
+#### Step 3: Linear Regression
+
+Model EBPAS ~ Step 1 predictors + possible covariates
+
+Covariates collected include:
+
+* Age
+* Gender
+* Medical School Year
+* Dual Degree
+* Interest in Research
+
+
+
+
+
+
+
+
+
 

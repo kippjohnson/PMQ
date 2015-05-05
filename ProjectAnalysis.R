@@ -28,12 +28,37 @@ table(infile$Q27, exclude=NULL)
 
 # Q28.2 = year of medical school
 table(infile$Q28.2)
+table(infile$Q28.2, exclude=NULL)
 
 # Q29.1 = dual degree program? (1=yes)
 table(infile$Q29.1)
 
 # Q30.1 = research interest (1=yes)
 table(infile$Q30.1)
+
+### ACtually do demographics
+nMales = table(infile$Q27)[[1]]
+nFemales = table(infile$Q27)[[2]]
+nNoSex = table(infile$Q27,exclude=NULL)[[3]]
+
+nMS1 = table(infile$Q28.2)[[1]]
+nMS2 = table(infile$Q28.2)[[2]]
+nMS3 = table(infile$Q28.2)[[3]]
+nMS4 = table(infile$Q28.2)[[4]]
+nMSNone = table(infile$Q28.2,exclude=NULL)[[5]]
+
+nDual = table(infile$Q29.1)[[1]]
+nResearch = table(infile$Q30.1)[[1]]
+
+demog <-  data.frame(c(nMales,nFemales,nNoSex,nMS1,nMS2,nMS3,nMS4,nMSNone,nDual,nResearch))
+colnames(demog) <- "Number of Students"
+row.names(demog) <- c("Male","Female","No Sex Given","MS1","MS2","MS3","MS4","No Year Given","Total Dual Degree","Total with Research Interest")
+
+demog <- mutate(demog, PercentTotal = demog[,1] / 212)
+
+kable(demog, digits=2)
+
+
 
 ### Space to print a demographics table
 
