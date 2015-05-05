@@ -2,7 +2,7 @@
 title: "Medical Student Attitude Toward Personalized Medicine Report"
 author: "Kipp Johnson"
 date: "May 4, 2015"
-output: word_document
+output: html_document
 ---
 
 Begin by calling packages which will be used later in the report:
@@ -46,6 +46,7 @@ kable(demog, digits=2)
 ### EBPAS Statistics
 The first step is to compute EBPAS total score, along with its subsets for scores of openness, divergence, and education. Questions 1-12 define the EBPAS scale on the survey, with its three subsets of openness, divergence, and education. There are a number of people who did not completely fill out the first 12 questions of the survey, and for this analysis they will be dropped.
 
+
 ```{r, echo=FALSE }
 infile2 <- mutate(infile, EBPAS = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
 infile3 <- infile2[-which(is.na(infile2$EBPAS)),]
@@ -53,7 +54,11 @@ infile3 <- infile2[-which(is.na(infile2$EBPAS)),]
 
 Number of people who did not completely fill out the first 12 questions of the survey: **`r length(which(is.na(infile2$EBPAS)))`**
 
-We will drop all of these individuals from the rest of the study? *_This is something which should be discussed_*
+Questions:
+
+* Should the divergence Likert scores be reversed?__
+* We will drop all of these individuals from the rest of the study? 
+* Should we also compute Cronbach's alpha for questions 18-21 (comfort in knowledge of genomic testing) and questions 22-25 (comfort in ability to use genomic testing) __or__ should these be incorporated into the EBPAS?
 
 ```{r, echo=FALSE}
 infile2 <- mutate(infile, EBPAS = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
@@ -118,6 +123,7 @@ Includes:
 * Comfort using technology
 * Knowledge of genomic testing concepts
 * Ability to understand genomic testing concepts
+
 
 *Also calculate these by covariate?*
 

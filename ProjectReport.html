@@ -141,6 +141,7 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 <div id="ebpas-statistics" class="section level3">
 <h3>EBPAS Statistics</h3>
 <p>The first step is to compute EBPAS total score, along with its subsets for scores of openness, divergence, and education. Questions 1-12 define the EBPAS scale on the survey, with its three subsets of openness, divergence, and education. There are a number of people who did not completely fill out the first 12 questions of the survey, and for this analysis they will be dropped.</p>
+<p><strong>One question I had: should the divergence Likert scores be reversed?</strong></p>
 <p>Number of people who did not completely fill out the first 12 questions of the survey: <strong>17</strong></p>
 <p>We will drop all of these individuals from the rest of the study? <em><em>This is something which should be discussed</em></em></p>
 <p>Computing Crohnbach’s Alpha: We use the alpha() function from the psych package in R. The EBPAS cronbach’s alpha is taken from the literature (Overby et al., J Pers. Med. 2014), as was done in the paper on which we are modeling this.</p>

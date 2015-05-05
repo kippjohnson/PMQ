@@ -102,3 +102,35 @@ EBPAStable <- t(data.frame(EBPASstats,educationstats, divergencestats, education
 colnames(EBPAStable)  <- c("N","Mean","SD","Min","Max","Alpha")
 rownames(EBPAStable) <- c("EBPAS", "education", "divergence","openness")
 kable(EBPAStable)
+
+### Frequency Calculations
+
+# Attitudes
+table(infile$Q13) # Have heard of DTC: 50 no, 101 yes
+table(infile$Q14) # Would use DTC: 73 would not use, 121 would use, 9 did use
+table(infile$Q15) # Can interpret DTC: 35 str. disagree, 30 dis, 72 uncertain, 58 agree, 14 str. agree
+table(infile$Q16) # Vast majority comfortable with computers
+table(infile$Q17) # Comfort with using EPIC
+
+table(infile$Q18) # Comfort with basic genomic testing concepts and terminology
+table(infile$Q19) # Comfort with pharmacogenomics knowledge
+table(infile$Q20) # Comfort with knowledge about genetic variation
+table(infile$Q21) # Comfort with knolwedge about NGS
+
+table(infile$Q22) # Ability to recommend genetic testing
+table(infile$Q23) # Ability to understand genomic test results
+table(infile$Q24) # Ability to explain genomic test results to patients
+table(infile$Q25) # Ability to make treatment recommendations based upon genomic test results
+
+
+### T Tests
+
+t.test(infile3$EBPAS ~ infile3$Q13) #NS
+
+summary(aov(infile3$EBPAS ~ (infile3$Q14))) #NS
+  boxplot(EBPAS ~ Q14, data=infile3)
+
+summary(aov(infile3$EBPAS ~ (infile3$Q15))) #significant
+  boxplot(EBPAS ~ Q15, data=infile3)
+
+
