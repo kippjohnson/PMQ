@@ -442,10 +442,74 @@ s25 <- ddply(infile3, ~infile3$Q25c, summarize, N=length(EBPAS), mean=mean(EBPAS
 
 ```
 
-#### Summary table of Results from Collapsed T test
+#### Summary Table of Results from Collapsed T-tests (Analagous to Table. 6, Overby et al.)
 ```{r, echo=FALSE}
 
-#q13 <- c("Question 13", 
+q14.1 <- c(s14$N[1], s14$mean[1], s14$SD[1], CT14$p.value)
+q14.2 <- c(s14$N[2], s14$mean[2], s14$SD[2], CT14$p.value)
+q15.1 <- c(s15$N[1], s15$mean[1], s15$SD[1], CT15$p.value)
+q15.2 <- c(s15$N[2], s15$mean[2], s15$SD[2], CT15$p.value)
+q16.1 <- c(s16$N[1], s16$mean[1], s16$SD[1], CT16$p.value)
+q16.2 <- c(s16$N[2], s16$mean[2], s16$SD[2], CT16$p.value)
+q17.1 <- c(s17$N[1], s17$mean[1], s17$SD[1], CT17$p.value)
+q17.2 <- c(s17$N[2], s17$mean[2], s17$SD[2], CT17$p.value)
+q18.1 <- c(s18$N[1], s18$mean[1], s18$SD[1], CT18$p.value)
+q18.2 <- c(s18$N[2], s18$mean[2], s18$SD[2], CT18$p.value)
+q19.1 <- c(s19$N[1], s19$mean[1], s19$SD[1], CT19$p.value)
+q19.2 <- c(s19$N[2], s19$mean[2], s19$SD[2], CT19$p.value)
+q20.1 <- c(s20$N[1], s20$mean[1], s20$SD[1], CT20$p.value)
+q20.2 <- c(s20$N[2], s20$mean[2], s20$SD[2], CT20$p.value)
+q21.1 <- c(s21$N[1], s21$mean[1], s21$SD[1], CT21$p.value)
+q21.2 <- c(s21$N[2], s21$mean[2], s21$SD[2], CT21$p.value)
+q22.1 <- c(s22$N[1], s22$mean[1], s22$SD[1], CT22$p.value)
+q22.2 <- c(s22$N[2], s22$mean[2], s22$SD[2], CT22$p.value)
+q23.1 <- c(s23$N[1], s23$mean[1], s23$SD[1], CT23$p.value)
+q23.2 <- c(s23$N[2], s23$mean[2], s23$SD[2], CT23$p.value)
+q24.1 <- c(s24$N[1], s24$mean[1], s24$SD[1], CT24$p.value)
+q24.2 <- c(s24$N[2], s24$mean[2], s24$SD[2], CT24$p.value)
+q25.1 <- c(s25$N[1], s25$mean[1], s25$SD[1], CT25$p.value)
+q25.2 <- c(s25$N[2], s25$mean[2], s25$SD[2], CT25$p.value)
+
+out <- data.frame(t(data.frame(q14.1,q14.2,
+                               q15.1,q15.2,
+                               q16.1,q16.2,
+                               q17.1,q17.2,
+                               q18.1,q18.2,
+                               q19.1,q19.2,
+                               q20.1,q20.2,
+                               q21.1,q21.2,
+                               q22.1,q22.2,
+                               q23.1,q23.2,
+                               q24.1,q24.2,
+                               q25.1,q25.2)))
+
+colnames(out) <- c("N","Mean","SD","P-Value")
+row.names(out) <- c("Question 14 Group 1",
+                    "Question 14 Group 2",
+                    "Question 15 Group 1",
+                    "Question 15 Group 2",
+                    "Question 16 Group 1",
+                    "Question 16 Group 2",
+                    "Question 17 Group 1",
+                    "Question 17 Group 2",
+                    "Question 18 Group 1",
+                    "Question 18 Group 2",
+                    "Question 19 Group 1",
+                    "Question 19 Group 2",
+                    "Question 20 Group 1",
+                    "Question 20 Group 2",
+                    "Question 21 Group 1",
+                    "Question 21 Group 2",
+                    "Question 22 Group 1",
+                    "Question 22 Group 2",
+                    "Question 23 Group 1",
+                    "Question 23 Group 2",
+                    "Question 24 Group 1",
+                    "Question 24 Group 2",
+                    "Question 25 Group 1",
+                    "Question 25 Group 2")
+
+kable(out, digits=3)           
         
 ```
 
