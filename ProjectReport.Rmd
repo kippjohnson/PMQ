@@ -1,25 +1,29 @@
 ---
-title: "Medical Student Attitude Toward Personalized Medicine Report"
+title: "Medical Student Attitudes Toward Personalized Medicine Report"
 author: "Kipp Johnson"
-date: "May 4, 2015"
+date: "May 15, 2015"
 output: html_document
 ---
 
+Note: This analysis is conducted in R using R Markdown for report generation. The raw data as well as the source code for every table, figure, and calculation is accessible at https://www.github.com/kippjohnson/PMQ/
+
 Begin by calling packages which will be used later in the report:
-```{r, error=FALSE,warning=FALSE,autodep=FALSE,collapse=TRUE,message=FALSE}
+```{r Call required libraries, error=FALSE,warning=FALSE,autodep=FALSE,collapse=TRUE,message=FALSE}
 library(knitr)
 library(psych)
+library(dunn.test)
 ```
 
 Reading in the data from the Github Repository (/kippjohnson/PMQ):
-```{r, results='hide'}
+```{r Read in data from Github, results='hide'}
+rm(list=ls())
 tmp <- tempfile()
 download.file("https://raw.githubusercontent.com/kippjohnson/PMQ/master/SurveyResponses.csv", destfile=tmp, method="curl")
 infile <- read.csv(tmp,header=TRUE)
 ```
 
 ### Demographics
-```{r, echo=FALSE}
+```{r Demographics Table, echo=FALSE}
 nMales = table(infile$Q27)[[1]]
 nFemales = table(infile$Q27)[[2]]
 nNoSex = table(infile$Q27,exclude=NULL)[[3]]
@@ -35,41 +39,40 @@ nResearch = table(infile$Q30.1)[[1]]
 
 demog <-  data.frame(c(nMales,nFemales,nNoSex,nMS1,nMS2,nMS3,nMS4,nMSNone,nDual,nResearch))
 colnames(demog) <- "Number of Students"
-row.names(demog) <- c("Male","Female","No Sex Given","MS1","MS2","MS3","MS4","No Year Given","Total Dual Degree","Total with Research Interest")
+row.names(demog) <- c("Male","Female","No Sex Given","MS1","MS2","MS3","MS4","No Year Given","Total with Research Interest","Total Dual Degree")
 
 demog <- mutate(demog, PercentTotal = demog[,1] / 212)
 
-kable(demog, digits=2)
+kable(demog, digits=2,padding=0)
 ```
 
 
 ### EBPAS Statistics
-The first step is to compute EBPAS total score, along with its subsets for scores of openness, divergence, and education. Questions 1-12 define the EBPAS scale on the survey, with its three subsets of openness, divergence, and education. There are a number of people who did not completely fill out the first 12 questions of the survey, and for this analysis they will be dropped.
+The first step is to compute EBPAS total score, along with its subsets for scores of openness, and divergence. Education is not included in the EBPAS. Questions 1-12 excluding 3, 6, 9, and 11 define the EBPAS scale on the survey. 3, 6, 9, and 11 are the education questions. There are a number of people who did not completely fill out the first 12 questions of the survey, and for this analysis they will be dropped.
 
+Questions 2, 4, 5, and 8 are 'divergence' questions, where the questions have answers which have been formulated to be the inverse of the answering scale. They need to be reversed for our analysis. 
 
-```{r, echo=FALSE }
-infile2 <- mutate(infile, EBPAS = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
-infile3 <- infile2[-which(is.na(infile2$EBPAS)),]
+```{r Drop observations that are incomplete in EBPAS, echo=FALSE }
+infile2 <- mutate(infile, total1to12 = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
+infile3 <- infile2[-which(is.na(infile2$total1to12)),] #drop incompletes
 ```
 
-Number of people who did not completely fill out the first 12 questions of the survey: **`r length(which(is.na(infile2$EBPAS)))`**
+Number of people who did not completely fill out the first 12 questions on the survey: **`r length(which(is.na(infile2$total1to12)))`**
 
 Questions:
+- Will we drop all of these  **`r length(which(is.na(infile2$total1to12)))`** individuals from the rest of the study? 
 
-* Should the divergence Likert scores be reversed?__
-* We will drop all of these individuals from the rest of the study? 
-* Should we also compute Cronbach's alpha for questions 18-21 (comfort in knowledge of genomic testing) and questions 22-25 (comfort in ability to use genomic testing) __or__ should these be incorporated into the EBPAS?
-
-```{r, echo=FALSE}
-infile2 <- mutate(infile, EBPAS = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
+```{r Making EBPAS openness divergence education columns, echo=FALSE}
+infile3 <- mutate(infile3, EBPAS = Q1+Q2+Q4+Q5+Q7+Q8+Q10+Q12)
 infile3 <- mutate(infile3, openness = Q1+Q7+Q10+Q12)
 infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
 infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
 ```
 
-Computing Crohnbach's Alpha: We use the alpha() function from the psych package in R. The EBPAS cronbach's alpha is taken from the literature (Overby et al., J Pers. Med. 2014), as was done in the paper on which we are modeling this.
+#### Cronbach's Alpha Calculations
+For Cronbach's alpha, we use the alpha() function from the psych package in R. The EBPAS cronbach's alpha is taken from the literature {0.78} (Overby et al., J Pers. Med. 2014), as was done in the paper from which we are modeling this.
 
-```{r, echo=FALSE}
+```{r Define Sum function, echo=FALSE}
 sums <- function(somevector){
   n <- length(somevector)
   xbar <- mean(somevector)
@@ -83,21 +86,25 @@ sums <- function(somevector){
 ```
 
 
-```{r, echo=FALSE, warning=FALSE}
+```{r Getting Initialized, echo=FALSE, warning=FALSE}
 EBPASstats <- sums(infile3$EBPAS)
 opennessstats <- sums(infile3$openness)
 divergencestats <- sums(infile3$divergence)
 educationstats <- sums(infile3$education)
 
-EBPAS_alpha <- 0.78
-#div_corrected <- abs(infile3[,c(3,5,6,9)] - 6)
+
+divergence_corrected <- abs(infile3[,c("Q2","Q4","Q5","Q8")] - 6)
 #EBPAS_alpha <- alpha(infile3[,c(2,4,7,8,10,11,12,13,div_corrected)])
 
-openness_alpha <- alpha(infile3[,c("Q1","Q7","Q10","Q12")]) # alpha=081
-divergence_alpha <- alpha(infile3[,c("Q2","Q4","Q5","Q8")]) # alpha=0.55
-education_alpha <- alpha(infile3[,c("Q3","Q6","Q9","Q11")]) # alpha=0.53
+EBPAS_alpha <- 0.78
+#EBPAS_alpha <- alpha(infile3[,c("Q1","Q2","Q4","Q5","Q7","Q8","Q10","Q12")])
+openness_alpha <- alpha(infile3[,c("Q1","Q7","Q10","Q12")])
+#divergence_alpha <- alpha(infile3[,c("Q2","Q4","Q5","Q8")])
+divergence_alpha <- alpha(divergence_corrected)
+education_alpha <- alpha(infile3[,c("Q3","Q6","Q9","Q11")]) 
 
 EBPASstats <- c(EBPASstats, EBPAS_alpha)
+#EBPASstats <- c(EBPASstats, EBPAS_alpha$total[[1]])
 opennessstats <- c(opennessstats, openness_alpha$total[[1]])
 divergencestats <- c(divergencestats, divergence_alpha$total[[1]])
 educationstats <- c(educationstats, education_alpha$total[[1]])
@@ -109,7 +116,23 @@ rownames(EBPAStable) <- c("EBPAS", "education", "divergence","openness")
 
 `r kable(EBPAStable, digits=3)`
 
+#### Cronbach's alpha for different possible 3-question subsets of education
+From the education questions 3, 6, 9, and 11, we can make four different possible subsets of three questions: 3, 6, 9; 3, 9, 11; 3, 6, 11; 6, 9, 11. Here, we compute the Cronbach's alpha for these possible subsets of questions.
+
+```{r, echo=FALSE, warning=FALSE}
+subset369  <- alpha(infile3[,c("Q3","Q6","Q9")])$total[[1]]
+subset3911 <- alpha(infile3[,c("Q3","Q9","Q11")])$total[[1]]
+subset3611 <- alpha(infile3[,c("Q3","Q6","Q11")])$total[[1]]
+subset6911 <- alpha(infile3[,c("Q6","Q9","Q11")])$total[[1]]
+
+subsettable <- t(data.frame(subset369, subset3911, subset3611, subset6911))
+colnames(subsettable) <- c("Alpha")
+rownames(subsettable) <- c("Questions 3, 9, 9","Questions 3, 9, 11", "Questions 3, 6, 11", "Questions 6, 9, 11")
+kable(subsettable)
+```
+
 ##  Analysis Plan
+
 #### Step 1: Frequencies
 
 *Question Response Frequencies*: Tables of each question's (13-25) response frequency. These questions include:
@@ -121,33 +144,41 @@ rownames(EBPAStable) <- c("EBPAS", "education", "divergence","openness")
 
 ```{r, echo=FALSE}
 
-kable(data.frame(table(infile$Q13)),col.names=c("Question 13", "Frequency")) # Have heard of DTC: 50 no, 101 yes
-kable(data.frame(table(infile$Q14)),col.names=c("Question 14", "Frequency")) # Would use DTC: 73 would not use, 121 would use, 9 did use
-kable(data.frame(table(infile$Q15)),col.names=c("Question 15", "Frequency")) # Can interpret DTC: 35 str. disagree, 30 dis, 72 uncertain, 58 agree, 14 str. agree
-kable(data.frame(table(infile$Q16)),col.names=c("Question 16", "Frequency")) # Vast majority comfortable with computers
-kable(data.frame(table(infile$Q17)),col.names=c("Question 17", "Frequency")) # Comfort with using EPIC
+kable(data.frame(table(infile$Q13)),col.names=c("Question 13", "Frequency"),align="l") # Have heard of DTC: 50 no, 101 yes
+kable(data.frame(table(infile$Q14)),col.names=c("Question 14", "Frequency"),align="l") # Would use DTC: 73 would not use, 121 would use, 9 did use
+kable(data.frame(table(infile$Q15)),col.names=c("Question 15", "Frequency"),align="l") # Can interpret DTC: 35 str. disagree, 30 dis, 72 uncertain, 58 agree, 14 str. agree
+kable(data.frame(table(infile$Q16)),col.names=c("Question 16", "Frequency"),align="l") # Vast majority comfortable with computers
+kable(data.frame(table(infile$Q17)),col.names=c("Question 17", "Frequency"),align="l") # Comfort with using EPIC
 
-kable(data.frame(table(infile$Q18)),col.names=c("Question 18", "Frequency")) # Comfort with basic genomic testing concepts and terminology
-kable(data.frame(table(infile$Q19)),col.names=c("Question 19", "Frequency")) # Comfort with pharmacogenomics knowledge
-kable(data.frame(table(infile$Q20)),col.names=c("Question 20", "Frequency")) # Comfort with knowledge about genetic variation
-kable(data.frame(table(infile$Q21)),col.names=c("Question 21", "Frequency")) # Comfort with knolwedge about NGS
+kable(data.frame(table(infile$Q18)),col.names=c("Question 18", "Frequency"),align="l") # Comfort with basic genomic testing concepts and terminology
+kable(data.frame(table(infile$Q19)),col.names=c("Question 19", "Frequency"),align="l") # Comfort with pharmacogenomics knowledge
+kable(data.frame(table(infile$Q20)),col.names=c("Question 20", "Frequency"),align="l") # Comfort with knowledge about genetic variation
+kable(data.frame(table(infile$Q21)),col.names=c("Question 21", "Frequency"),align="l") # Comfort with knolwedge about NGS
 
-kable(data.frame(table(infile$Q22)),col.names=c("Question 22", "Frequency")) # Ability to recommend genetic testing
-kable(data.frame(table(infile$Q23)),col.names=c("Question 23", "Frequency")) # Ability to understand genomic test results
-kable(data.frame(table(infile$Q24)),col.names=c("Question 24", "Frequency")) # Ability to explain genomic test results to patients
-kable(data.frame(table(infile$Q25)),col.names=c("Question 25", "Frequency")) # Ability to make treatment recommendations based upon genomic test results
+kable(data.frame(table(infile$Q22)),col.names=c("Question 22", "Frequency"),align="l") # Ability to recommend genetic testing
+kable(data.frame(table(infile$Q23)),col.names=c("Question 23", "Frequency"),align="l") # Ability to understand genomic test results
+kable(data.frame(table(infile$Q24)),col.names=c("Question 24", "Frequency"),align="l") # Ability to explain genomic test results to patients
+kable(data.frame(table(infile$Q25)),col.names=c("Question 25", "Frequency"),align="l") # Ability to make treatment recommendations based upon genomic test results
 ```
 
-*Should we also calculate these frequencies by covariate?*
+### Step 2: T-Tests
 
-#### Step 2: T-Tests
+First, answers for questions 13-25 were tested for an association with EBPAS Score (Questions 1-12 excluding the education questions) using ANOVA followed by Tukey Honest Signficant Differences. Second, the answers were collapsed into binary categories and T-tests for association with EBPAS score were performed.
 
-Answers for questions 13-15 were tested for an association with EBPAS Score (Questions 1-12) using ANOVA followed by Tukey Honest Signficant Differences. ANOVA+Tukey Results are not currently shown in the table following the code output.
+The R output for each ANOVA, Tukey-HSD, and Collapsed T-test is shown below. After the end of the output there is a table summarizing the results in a fashion analagous to Table 6 in Overby et al.
 
-Second, the answers were collapsed into binary categories and T-tests for association with EBPAS score were performed.
+The format for each ANOVA is EBPAS ~ Question Answer Choices. After that, if the ANOVA is significant, a Tukey HSD test is computed. The TukeyHSD test shows which answer choices in the ANOVA results are actually associated with significantly different EBPAS scores.
+
+The collapsed T-tests were collapsed by assigning the responses in the first three Likert Groups to one group (For example, "Not At All Comfortable, Not Very Comfortable, and Neither Comfortable nor Uncomfortable" were collapsed to *Group 1*), and collapsing the remaining Likery Groups to a second group ("Comfortable and Very Comfortable were assigned to *Group Two*") 
+
+Note: The EBPAS scores totals are approximately normal by visual analysis:
+
+```{r EBPASPLOT, echo=FALSE}
+hist(infile3$EBPAS, xlab="EBPAS Score", main="Histogram of EBPAS Totals")
+```
 
 ##### Question 13
-```{r Q13, echo=FALSE}
+```{r Q13, echo=FALSE, results='hold', fig.show='hide'}
 ### Q13
 #Q13 T-test
 t.test(infile3$EBPAS ~ infile3$Q13) #NS
@@ -155,7 +186,7 @@ boxplot(EBPAS ~ Q13, data=infile3)
 ```
 
 ##### Question 14
-```{r Q14, echo=FALSE}
+```{r Q14, echo=FALSE, results='hold', fig.show='hide'}
 ### Q14
 #Q14 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q14))) #NS
@@ -173,7 +204,7 @@ s14 <- ddply(infile3, ~infile3$Q14c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 15
-```{r Q15, echo=FALSE}
+```{r Q15, echo=FALSE, results='hold', fig.show='hide'}
 
 ### Q15
 # Q15 ANOVA
@@ -199,7 +230,7 @@ s15 <- ddply(infile3, ~infile3$Q15c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 16
-```{r Q16, echo=FALSE}
+```{r Q16, echo=FALSE, results='hold', fig.show='hide'}
 ### Q16
 #Q16 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q16))) #significant
@@ -222,7 +253,7 @@ s16 <- ddply(infile3, ~infile3$Q16c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 17
-```{r Q17, echo=FALSE}
+```{r Q17, echo=FALSE, results='hold', fig.show='hide'}
 
 ### Q17
 #Q17 ANOVA
@@ -246,7 +277,7 @@ s17 <- ddply(infile3, ~infile3$Q17c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 18
-```{r Q18, echo=FALSE}
+```{r Q18, echo=FALSE, results='hold', fig.show='hide'}
 ### Q18
 #Q18 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q18)))
@@ -270,7 +301,7 @@ s18 <- ddply(infile3, ~infile3$Q18c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 19
-```{r Q19, echo=FALSE}
+```{r Q19, echo=FALSE, results='hold', fig.show='hide'}
 ### Q19
 #Q19 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q19)))
@@ -293,8 +324,8 @@ s19 <- ddply(infile3, ~infile3$Q19c, summarize, N=length(EBPAS), mean=mean(EBPAS
 
 ```
 
-##### Question 120
-```{r Q20, echo=FALSE}
+##### Question 20
+```{r Q20, echo=FALSE, results='hold', fig.show='hide'}
 
 ### Q20
 #Q20 ANOVA
@@ -319,7 +350,7 @@ s20 <- ddply(infile3, ~infile3$Q20c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 21
-```{r Q21, echo=FALSE}
+```{r Q21, echo=FALSE, results='hold', fig.show='hide'}
 
 ### Q21
 #Q21 ANOVA
@@ -344,7 +375,7 @@ s21 <- ddply(infile3, ~infile3$Q21c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 22
-```{r Q22, echo=FALSE}
+```{r Q22, echo=FALSE, results='hold', fig.show='hide'}
 ### Q22
 #Q22 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q22)))
@@ -368,7 +399,7 @@ s22 <- ddply(infile3, ~infile3$Q22c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 23
-```{r Q23, echo=FALSE}
+```{r Q23, echo=FALSE, results='hold', fig.show='hide'}
 
 ### Q23
 #Q23 ANOVA
@@ -393,7 +424,7 @@ s23 <- ddply(infile3, ~infile3$Q23c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 24
-```{r Q24, echo=FALSE}
+```{r Q24, echo=FALSE, results='hold', fig.show='hide'}
 
 ### Q24
 #Q24 ANOVA
@@ -418,7 +449,7 @@ s24 <- ddply(infile3, ~infile3$Q24c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 25
-```{r Q25, echo=FALSE}
+```{r Q25, echo=FALSE, results='hold', fig.show='hide'}
 
 ### Q25
 #Q25 ANOVA
@@ -442,33 +473,54 @@ s25 <- ddply(infile3, ~infile3$Q25c, summarize, N=length(EBPAS), mean=mean(EBPAS
 
 ```
 
-#### Summary Table of Results from Collapsed T-tests (Analagous to Table. 6, Overby et al.)
-```{r, echo=FALSE}
 
-q14.1 <- c(s14$N[1], s14$mean[1], s14$SD[1], CT14$p.value)
-q14.2 <- c(s14$N[2], s14$mean[2], s14$SD[2], CT14$p.value)
-q15.1 <- c(s15$N[1], s15$mean[1], s15$SD[1], CT15$p.value)
-q15.2 <- c(s15$N[2], s15$mean[2], s15$SD[2], CT15$p.value)
-q16.1 <- c(s16$N[1], s16$mean[1], s16$SD[1], CT16$p.value)
-q16.2 <- c(s16$N[2], s16$mean[2], s16$SD[2], CT16$p.value)
-q17.1 <- c(s17$N[1], s17$mean[1], s17$SD[1], CT17$p.value)
-q17.2 <- c(s17$N[2], s17$mean[2], s17$SD[2], CT17$p.value)
-q18.1 <- c(s18$N[1], s18$mean[1], s18$SD[1], CT18$p.value)
-q18.2 <- c(s18$N[2], s18$mean[2], s18$SD[2], CT18$p.value)
-q19.1 <- c(s19$N[1], s19$mean[1], s19$SD[1], CT19$p.value)
-q19.2 <- c(s19$N[2], s19$mean[2], s19$SD[2], CT19$p.value)
-q20.1 <- c(s20$N[1], s20$mean[1], s20$SD[1], CT20$p.value)
-q20.2 <- c(s20$N[2], s20$mean[2], s20$SD[2], CT20$p.value)
-q21.1 <- c(s21$N[1], s21$mean[1], s21$SD[1], CT21$p.value)
-q21.2 <- c(s21$N[2], s21$mean[2], s21$SD[2], CT21$p.value)
-q22.1 <- c(s22$N[1], s22$mean[1], s22$SD[1], CT22$p.value)
-q22.2 <- c(s22$N[2], s22$mean[2], s22$SD[2], CT22$p.value)
-q23.1 <- c(s23$N[1], s23$mean[1], s23$SD[1], CT23$p.value)
-q23.2 <- c(s23$N[2], s23$mean[2], s23$SD[2], CT23$p.value)
-q24.1 <- c(s24$N[1], s24$mean[1], s24$SD[1], CT24$p.value)
-q24.2 <- c(s24$N[2], s24$mean[2], s24$SD[2], CT24$p.value)
-q25.1 <- c(s25$N[1], s25$mean[1], s25$SD[1], CT25$p.value)
-q25.2 <- c(s25$N[2], s25$mean[2], s25$SD[2], CT25$p.value)
+We are doing 12 different significance tests (13-25). To correct for multiple testing, we can use the Bonferroni correction of alpha/number of tests, giving us P=`r 0.05/12`
+
+#### Summary Table of Results from Collapsed T-tests (Analagous to Table. 6, Overby et al.)
+```{r Summary table of Collapsed T Test Results (EBPAS), echo=FALSE}
+
+Pcritical <- 0.05/12
+
+print(c("Critical P-Value:  ", Pcritical) )
+
+
+ebpas_14adj <- CT14$p.value < Pcritical
+ebpas_15adj <- CT15$p.value < Pcritical
+ebpas_16adj <- CT16$p.value < Pcritical
+ebpas_17adj <- CT17$p.value < Pcritical
+ebpas_18adj <- CT18$p.value < Pcritical
+ebpas_19adj <- CT19$p.value < Pcritical
+ebpas_20adj <- CT20$p.value < Pcritical
+ebpas_21adj <- CT21$p.value < Pcritical
+ebpas_22adj <- CT22$p.value < Pcritical
+ebpas_23adj <- CT23$p.value < Pcritical
+ebpas_24adj <- CT24$p.value < Pcritical
+ebpas_25adj <- CT25$p.value < Pcritical
+
+q14.1 <- c(s14$N[1], s14$mean[1], s14$SD[1], CT14$p.value, ebpas_14adj)
+q14.2 <- c(s14$N[2], s14$mean[2], s14$SD[2], CT14$p.value, ebpas_14adj)
+q15.1 <- c(s15$N[1], s15$mean[1], s15$SD[1], CT15$p.value, ebpas_15adj)
+q15.2 <- c(s15$N[2], s15$mean[2], s15$SD[2], CT15$p.value, ebpas_15adj)
+q16.1 <- c(s16$N[1], s16$mean[1], s16$SD[1], CT16$p.value, ebpas_16adj)
+q16.2 <- c(s16$N[2], s16$mean[2], s16$SD[2], CT16$p.value, ebpas_16adj)
+q17.1 <- c(s17$N[1], s17$mean[1], s17$SD[1], CT17$p.value, ebpas_17adj)
+q17.2 <- c(s17$N[2], s17$mean[2], s17$SD[2], CT17$p.value, ebpas_17adj)
+q18.1 <- c(s18$N[1], s18$mean[1], s18$SD[1], CT18$p.value, ebpas_18adj)
+q18.2 <- c(s18$N[2], s18$mean[2], s18$SD[2], CT18$p.value, ebpas_18adj)
+q19.1 <- c(s19$N[1], s19$mean[1], s19$SD[1], CT19$p.value, ebpas_19adj)
+q19.2 <- c(s19$N[2], s19$mean[2], s19$SD[2], CT19$p.value, ebpas_19adj)
+q20.1 <- c(s20$N[1], s20$mean[1], s20$SD[1], CT20$p.value, ebpas_20adj)
+q20.2 <- c(s20$N[2], s20$mean[2], s20$SD[2], CT20$p.value, ebpas_20adj)
+q21.1 <- c(s21$N[1], s21$mean[1], s21$SD[1], CT21$p.value, ebpas_21adj)
+q21.2 <- c(s21$N[2], s21$mean[2], s21$SD[2], CT21$p.value, ebpas_21adj)
+q22.1 <- c(s22$N[1], s22$mean[1], s22$SD[1], CT22$p.value, ebpas_22adj)
+q22.2 <- c(s22$N[2], s22$mean[2], s22$SD[2], CT22$p.value, ebpas_22adj)
+q23.1 <- c(s23$N[1], s23$mean[1], s23$SD[1], CT23$p.value, ebpas_23adj)
+q23.2 <- c(s23$N[2], s23$mean[2], s23$SD[2], CT23$p.value, ebpas_23adj)
+q24.1 <- c(s24$N[1], s24$mean[1], s24$SD[1], CT24$p.value, ebpas_24adj)
+q24.2 <- c(s24$N[2], s24$mean[2], s24$SD[2], CT24$p.value, ebpas_24adj)
+q25.1 <- c(s25$N[1], s25$mean[1], s25$SD[1], CT25$p.value, ebpas_25adj)
+q25.2 <- c(s25$N[2], s25$mean[2], s25$SD[2], CT25$p.value, ebpas_25adj)
 
 out <- data.frame(t(data.frame(q14.1,q14.2,
                                q15.1,q15.2,
@@ -483,7 +535,7 @@ out <- data.frame(t(data.frame(q14.1,q14.2,
                                q24.1,q24.2,
                                q25.1,q25.2)))
 
-colnames(out) <- c("N","Mean","SD","P-Value")
+colnames(out) <- c("N","Mean","SD","T-Test P-Value","P-Value Significant? (1=Yes, 0=No)")
 row.names(out) <- c("Question 14 Group 1",
                     "Question 14 Group 2",
                     "Question 15 Group 1",
@@ -513,24 +565,695 @@ kable(out, digits=3)
         
 ```
 
-#### Step 3: Linear Regression
+### Statistical Tests (ANOVA and Collapsed T-tests) for four education questions
 
-Model EBPAS ~ Step 1 predictors + possible covariates
+In the previous section, we performed ANOVA and collapsed T tests for the 8 EBPAS questions on the predictor questions 13-25. For the education questions 3, 6, 9, and 11, we cannot combine them into one category because Cronbach's alpha is <0.7 for them. However, we can analyze the questions individually, as is done here:
 
-Covariates collected include:
+##### Tests for association with Education question 3
+```{r Q3 on Education, echo=FALSE, results='hold', fig.show='hide'}
 
-* Age
-* Gender
-* Medical School Year
-* Dual Degree
-* Interest in Research
+### Q3
 
+#Q3 Collapsed t-tests
+ed_3on13 <- t.test(infile3$Q3 ~ infile3$Q13)
+ed_3on14 <- t.test(infile3$Q3 ~ infile3$Q14c)
+ed_3on15 <- t.test(infile3$Q3 ~ infile3$Q15c)
+ed_3on16 <- t.test(infile3$Q3 ~ infile3$Q16c)
+ed_3on17 <- t.test(infile3$Q3 ~ infile3$Q17c)
+ed_3on18 <- t.test(infile3$Q3 ~ infile3$Q18c)
+ed_3on19 <- t.test(infile3$Q3 ~ infile3$Q19c)
+ed_3on20 <- t.test(infile3$Q3 ~ infile3$Q20c)
+ed_3on21 <- t.test(infile3$Q3 ~ infile3$Q21c)
+ed_3on22 <- t.test(infile3$Q3 ~ infile3$Q22c)
+ed_3on23 <- t.test(infile3$Q3 ~ infile3$Q23c)
+ed_3on24 <- t.test(infile3$Q3 ~ infile3$Q24c)
+ed_3on25 <- t.test(infile3$Q3 ~ infile3$Q25c)
 
+ed_3on13_adj <- ed_3on13$p.value < Pcritical
+ed_3on14_adj <- ed_3on14$p.value < Pcritical
+ed_3on15_adj <- ed_3on15$p.value < Pcritical
+ed_3on16_adj <- ed_3on16$p.value < Pcritical
+ed_3on17_adj <- ed_3on17$p.value < Pcritical
+ed_3on18_adj <- ed_3on18$p.value < Pcritical
+ed_3on19_adj <- ed_3on19$p.value < Pcritical
+ed_3on20_adj <- ed_3on20$p.value < Pcritical
+ed_3on21_adj <- ed_3on21$p.value < Pcritical
+ed_3on22_adj <- ed_3on22$p.value < Pcritical
+ed_3on23_adj <- ed_3on23$p.value < Pcritical
+ed_3on24_adj <- ed_3on24$p.value < Pcritical
+ed_3on25_adj <- ed_3on25$p.value < Pcritical
 
+out3 <- t(data.frame(c(ed_3on13$p.value, ed_3on13_adj),
+                   c(ed_3on14$p.value, ed_3on14_adj),
+                   c(ed_3on15$p.value, ed_3on15_adj),
+                   c(ed_3on16$p.value, ed_3on16_adj),
+                   c(ed_3on17$p.value, ed_3on17_adj),
+                   c(ed_3on18$p.value, ed_3on18_adj),
+                   c(ed_3on19$p.value, ed_3on19_adj),
+                   c(ed_3on20$p.value, ed_3on20_adj),
+                   c(ed_3on21$p.value, ed_3on21_adj),
+                   c(ed_3on22$p.value, ed_3on22_adj),
+                   c(ed_3on23$p.value, ed_3on23_adj),
+                   c(ed_3on24$p.value, ed_3on24_adj),
+                   c(ed_3on25$p.value, ed_3on25_adj)
+                   )
+                )
 
+colnames(out3) <- c("P Value", "Significant (1=Yes, 0=No)")
+rownames(out3) <- c("Question 13","Question 14","Question 15","Question 16","Question 17","Question 18","Question 19","Question 20","Question 21","Question 22","Question 23","Question 24","Question 25")
 
+kable(out3, digits=6)
 
+```
 
+##### Tests for association with Education question 6
+```{r Q6 on Education, echo=FALSE, results='hold', fig.show='hide'}
+### Q6
 
+#Q6 Collapsed t-tests
+ed_6on13 <- t.test(infile3$Q6 ~ infile3$Q13)
+ed_6on14 <- t.test(infile3$Q6 ~ infile3$Q14c)
+ed_6on15 <- t.test(infile3$Q6 ~ infile3$Q15c)
+ed_6on16 <- t.test(infile3$Q6 ~ infile3$Q16c)
+ed_6on17 <- t.test(infile3$Q6 ~ infile3$Q17c)
+ed_6on18 <- t.test(infile3$Q6 ~ infile3$Q18c)
+ed_6on19 <- t.test(infile3$Q6 ~ infile3$Q19c)
+ed_6on20 <- t.test(infile3$Q6 ~ infile3$Q20c)
+ed_6on21 <- t.test(infile3$Q6 ~ infile3$Q21c)
+ed_6on22 <- t.test(infile3$Q6 ~ infile3$Q22c)
+ed_6on23 <- t.test(infile3$Q6 ~ infile3$Q23c)
+ed_6on24 <- t.test(infile3$Q6 ~ infile3$Q24c)
+ed_6on25 <- t.test(infile3$Q6 ~ infile3$Q25c)
+
+ed_6on13_adj <- ed_6on13$p.value < Pcritical
+ed_6on14_adj <- ed_6on14$p.value < Pcritical
+ed_6on15_adj <- ed_6on15$p.value < Pcritical
+ed_6on16_adj <- ed_6on16$p.value < Pcritical
+ed_6on17_adj <- ed_6on17$p.value < Pcritical
+ed_6on18_adj <- ed_6on18$p.value < Pcritical
+ed_6on19_adj <- ed_6on19$p.value < Pcritical
+ed_6on20_adj <- ed_6on20$p.value < Pcritical
+ed_6on21_adj <- ed_6on21$p.value < Pcritical
+ed_6on22_adj <- ed_6on22$p.value < Pcritical
+ed_6on23_adj <- ed_6on23$p.value < Pcritical
+ed_6on24_adj <- ed_6on24$p.value < Pcritical
+ed_6on25_adj <- ed_6on25$p.value < Pcritical
+
+out6 <- t(data.frame(c(ed_6on13$p.value, ed_6on13_adj),
+                   c(ed_6on14$p.value, ed_6on14_adj),
+                   c(ed_6on15$p.value, ed_6on15_adj),
+                   c(ed_6on16$p.value, ed_6on16_adj),
+                   c(ed_6on17$p.value, ed_6on17_adj),
+                   c(ed_6on18$p.value, ed_6on18_adj),
+                   c(ed_6on19$p.value, ed_6on19_adj),
+                   c(ed_6on20$p.value, ed_6on20_adj),
+                   c(ed_6on21$p.value, ed_6on21_adj),
+                   c(ed_6on22$p.value, ed_6on22_adj),
+                   c(ed_6on23$p.value, ed_6on23_adj),
+                   c(ed_6on24$p.value, ed_6on24_adj),
+                   c(ed_6on25$p.value, ed_6on25_adj)
+                   )
+                )
+
+colnames(out6) <- c("P Value", "Significant (1=Yes, 0=No)")
+rownames(out6) <- c("Question 13","Question 14","Question 15","Question 16","Question 17","Question 18","Question 19","Question 20","Question 21","Question 22","Question 23","Question 24","Question 25")
+
+kable(out6,digits=6)
+```
+
+##### Tests for association with Education question 9
+```{r Q9 on Education, echo=FALSE, results='hold', fig.show='hide'}
+### Q9
+
+#Q9 Collapsed t-tests
+ed_9on13 <- t.test(infile3$Q9 ~ infile3$Q13)
+ed_9on14 <- t.test(infile3$Q9 ~ infile3$Q14c)
+ed_9on15 <- t.test(infile3$Q9 ~ infile3$Q15c)
+ed_9on16 <- t.test(infile3$Q9 ~ infile3$Q16c)
+ed_9on17 <- t.test(infile3$Q9 ~ infile3$Q17c)
+ed_9on18 <- t.test(infile3$Q9 ~ infile3$Q18c)
+ed_9on19 <- t.test(infile3$Q9 ~ infile3$Q19c)
+ed_9on20 <- t.test(infile3$Q9 ~ infile3$Q20c)
+ed_9on21 <- t.test(infile3$Q9 ~ infile3$Q21c)
+ed_9on22 <- t.test(infile3$Q9 ~ infile3$Q22c)
+ed_9on23 <- t.test(infile3$Q9 ~ infile3$Q23c)
+ed_9on24 <- t.test(infile3$Q9 ~ infile3$Q24c)
+ed_9on25 <- t.test(infile3$Q9 ~ infile3$Q25c)
+
+ed_9on13_adj <- ed_9on13$p.value < Pcritical
+ed_9on14_adj <- ed_9on14$p.value < Pcritical
+ed_9on15_adj <- ed_9on15$p.value < Pcritical
+ed_9on16_adj <- ed_9on16$p.value < Pcritical
+ed_9on17_adj <- ed_9on17$p.value < Pcritical
+ed_9on18_adj <- ed_9on18$p.value < Pcritical
+ed_9on19_adj <- ed_9on19$p.value < Pcritical
+ed_9on20_adj <- ed_9on20$p.value < Pcritical
+ed_9on21_adj <- ed_9on21$p.value < Pcritical
+ed_9on22_adj <- ed_9on22$p.value < Pcritical
+ed_9on23_adj <- ed_9on23$p.value < Pcritical
+ed_9on24_adj <- ed_9on24$p.value < Pcritical
+ed_9on25_adj <- ed_9on25$p.value < Pcritical
+
+out9 <- t(data.frame(c(ed_9on13$p.value, ed_9on13_adj),
+                   c(ed_9on14$p.value, ed_9on14_adj),
+                   c(ed_9on15$p.value, ed_9on15_adj),
+                   c(ed_9on16$p.value, ed_9on16_adj),
+                   c(ed_9on17$p.value, ed_9on17_adj),
+                   c(ed_9on18$p.value, ed_9on18_adj),
+                   c(ed_9on19$p.value, ed_9on19_adj),
+                   c(ed_9on20$p.value, ed_9on20_adj),
+                   c(ed_9on21$p.value, ed_9on21_adj),
+                   c(ed_9on22$p.value, ed_9on22_adj),
+                   c(ed_9on23$p.value, ed_9on23_adj),
+                   c(ed_9on24$p.value, ed_9on24_adj),
+                   c(ed_9on25$p.value, ed_9on25_adj)
+                   )
+                )
+
+colnames(out9) <- c("P Value", "Significant (1=Yes, 0=No)")
+rownames(out9) <- c("Question 13","Question 14","Question 15","Question 16","Question 17","Question 18","Question 19","Question 20","Question 21","Question 22","Question 23","Question 24","Question 25")
+
+kable(out9,digits=6)
+```
+
+##### Tests for association with Education question 11
+```{r Q11 on Education, echo=FALSE, results='hold', fig.show='hide'}
+### Q11
+
+#Q11 Collapsed t-tests
+ed_11on13 <- t.test(infile3$Q11 ~ infile3$Q13)
+ed_11on14 <- t.test(infile3$Q11 ~ infile3$Q14c)
+ed_11on15 <- t.test(infile3$Q11 ~ infile3$Q15c)
+ed_11on16 <- t.test(infile3$Q11 ~ infile3$Q16c)
+ed_11on17 <- t.test(infile3$Q11 ~ infile3$Q17c)
+ed_11on18 <- t.test(infile3$Q11 ~ infile3$Q18c)
+ed_11on19 <- t.test(infile3$Q11 ~ infile3$Q19c)
+ed_11on20 <- t.test(infile3$Q11 ~ infile3$Q20c)
+ed_11on21 <- t.test(infile3$Q11 ~ infile3$Q21c)
+ed_11on22 <- t.test(infile3$Q11 ~ infile3$Q22c)
+ed_11on23 <- t.test(infile3$Q11 ~ infile3$Q23c)
+ed_11on24 <- t.test(infile3$Q11 ~ infile3$Q24c)
+ed_11on25 <- t.test(infile3$Q11 ~ infile3$Q25c)
+
+ed_11on13_adj <- ed_11on13$p.value < Pcritical
+ed_11on14_adj <- ed_11on14$p.value < Pcritical
+ed_11on15_adj <- ed_11on15$p.value < Pcritical
+ed_11on16_adj <- ed_11on16$p.value < Pcritical
+ed_11on17_adj <- ed_11on17$p.value < Pcritical
+ed_11on18_adj <- ed_11on18$p.value < Pcritical
+ed_11on19_adj <- ed_11on19$p.value < Pcritical
+ed_11on20_adj <- ed_11on20$p.value < Pcritical
+ed_11on21_adj <- ed_11on21$p.value < Pcritical
+ed_11on22_adj <- ed_11on22$p.value < Pcritical
+ed_11on23_adj <- ed_11on23$p.value < Pcritical
+ed_11on24_adj <- ed_11on24$p.value < Pcritical
+ed_11on25_adj <- ed_11on25$p.value < Pcritical
+
+out11 <- t(data.frame(c(ed_11on13$p.value, ed_11on13_adj),
+                   c(ed_11on14$p.value, ed_11on14_adj),
+                   c(ed_11on15$p.value, ed_11on15_adj),
+                   c(ed_11on16$p.value, ed_11on16_adj),
+                   c(ed_11on17$p.value, ed_11on17_adj),
+                   c(ed_11on18$p.value, ed_11on18_adj),
+                   c(ed_11on19$p.value, ed_11on19_adj),
+                   c(ed_11on20$p.value, ed_11on20_adj),
+                   c(ed_11on21$p.value, ed_11on21_adj),
+                   c(ed_11on22$p.value, ed_11on22_adj),
+                   c(ed_11on23$p.value, ed_11on23_adj),
+                   c(ed_11on24$p.value, ed_11on24_adj),
+                   c(ed_11on25$p.value, ed_11on25_adj)
+                   )
+                )
+
+colnames(out11) <- c("P Value", "Significant (1=Yes, 0=No)")
+rownames(out11) <- c("Question 13","Question 14","Question 15","Question 16","Question 17","Question 18","Question 19","Question 20","Question 21","Question 22","Question 23","Question 24","Question 25")
+
+kable(out11,digits=6)
+```
+
+### Computing Cronbach's alpha for questions 18-21, 22-25, and 18-25 combined.
+
+Questions 18-21 ask the subject "How comfortable are you in your knowledge about [...]" various genomic testing concepts. Questions 22-25 ask the subject "How comfortable are you in your ability to [...]" apply various genomic testing concepts in a clinical setting. We can also combine all 8 questions together as a general genomic familiarity category. To see if these sections assessed the same central ability, we can compute Cronbach's alpha for each of them:
+
+```{r Calculation of Genomics Cronbach Alphas, echo=FALSE}
+
+knowledge_alpha <- alpha(infile3[,c("Q18","Q19","Q20","Q21")])
+ability_alpha <-   alpha(infile3[,c("Q22","Q23","Q24","Q25")])
+knowledge_ability_alpha <-   alpha(infile3[,c("Q18","Q19","Q20","Q21","Q22","Q23","Q24","Q25")])
+
+outka <- data.frame(knowledge_alpha$total[[1]], ability_alpha$total[[1]], knowledge_ability_alpha$total[[1]])
+colnames(outka) <- c("Questions 18-21 Alpha", "Questions 22-25 Alpha", "Questions 18-25 (Combined) Alpha")
+kable(outka)
+```
+
+As we can see, the Cronbach's alpha for these three sections are extremely high. We should consider further how we want to analyze these questions. As of now, we are testing the sum of the two categories pooled together for association with the covariates. 
+
+## Further EBPAS Analyses
+
+Because EBPAS score is a continuous vector of integers and is approximately normally distributed, the appropriate test to use here is ANOVA. 
+
+#### EBPAS ANOVAs
+```{r EBPAS ANOVAs on Covariates, echo=FALSE, fig.show='hide'}
+
+# EBPAS ~ Q26
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q26)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q26)))
+boxplot(EBPAS ~ Q26, data=infile3)
+
+# EBPAS ~ Q27
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q27)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q27)))
+boxplot(EBPAS ~ Q27, data=infile3)
+
+# EBPAS ~ Q28.2 ("Year of Medical School")
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q28.2)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q28.2)))
+boxplot(EBPAS ~ Q28.2, data=infile3)
+
+# EBPAS ~ Q29.1 ("Are you in a dual degre program?")
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q29.1)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q29.1)))
+boxplot(EBPAS ~ Q29.1, data=infile3)
+
+# EBPAS ~ Q29.2 ("If yes, which dual degree program")
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q29.2)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q29.2)))
+boxplot(EBPAS ~ Q29.2, data=infile3)
+
+# EBPAS ~ Q30.1
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q30.1)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q30.1)))
+boxplot(EBPAS ~ Q30.1, data=infile3)
+
+# EBPAS ~ Q30.2
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q30.2)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q30.2)))
+boxplot(EBPAS ~ Q30.2, data=infile3)
+```
+
+## Education Question Covariate Analysis
+
+I elected to use the Kruskal-Wallis test on the Likert Data instead of ANOVA. Chi-Square assumptions are usually not met without further grouping. KW test is a non-parametric version of one-way ANOVA appropriate here because of ordinal data. The results are summarized in the table below. Correction was done for multiple testing.
+
+##### Question 3
+```{r Education (No. 3) on Covariates, echo=FALSE, results='hide',fig.show='hide'}
+
+# Q3 ~ Q26
+summary(aov(infile3$Q3 ~ as.factor(infile3$Q26)))
+kwq3on26 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q26))
+#TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q26)))
+boxplot(EBPAS ~ Q3, data=infile3)
+
+# Q3 ~ Q27
+summary(aov(infile3$Q3 ~ as.factor(infile3$Q27)))
+kwq3on27 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q27))
+#TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q27)))
+boxplot(EBPAS ~ Q3, data=infile3)
+
+# Q3 ~ Q28.2 ("Year of Medical School")
+summary(aov(infile3$Q3 ~ as.factor(infile3$Q28.2)))
+kwq3on28.2 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q28.2))
+#TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q28.2)))
+boxplot(EBPAS ~ Q3, data=infile3)
+
+# Q3 ~ Q29.1 ("Are you in a dual degre program?")
+summary(aov(infile3$Q3 ~ as.factor(infile3$Q29.1)))
+kwq3on29.1 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q29.1))
+#TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q29.1)))
+boxplot(EBPAS ~ Q3, data=infile3)
+
+# Q3 ~ Q29.2 ("If yes, which dual degree program")
+summary(aov(infile3$Q3 ~ as.factor(infile3$Q29.2)))
+kwq3on29.2 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q29.2))
+#TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q29.2)))
+boxplot(EBPAS ~ Q3, data=infile3)
+
+# Q3 ~ Q30.1
+summary(aov(infile3$Q3 ~ as.factor(infile3$Q30.1)))
+kwq3on30.1 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q30.1))
+#TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q30.1)))
+boxplot(EBPAS ~ Q3, data=infile3)
+
+# Q3 ~ Q30.2
+summary(aov(infile3$Q3 ~ as.factor(infile3$Q30.2)))
+kwq3on30.2 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q30.2))
+#TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q30.2)))
+boxplot(EBPAS ~ Q3, data=infile3)
+```
+
+##### Question 6
+```{r Education (No. 6) on Covariates, echo=FALSE, results='hide',fig.show='hide'}
+
+# Q6 ~ Q26
+summary(aov(infile3$Q6 ~ as.factor(infile3$Q26)))
+kwq6on26 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q26))
+#TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q26)))
+boxplot(EBPAS ~ Q6, data=infile3)
+
+# Q6 ~ Q27
+summary(aov(infile3$Q6 ~ as.factor(infile3$Q27)))
+kwq6on27 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q27))
+#TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q27)))
+boxplot(EBPAS ~ Q6, data=infile3)
+
+# Q6 ~ Q28.2 ("Year of Medical School")
+summary(aov(infile3$Q6 ~ as.factor(infile3$Q28.2)))
+kwq6on28.2 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q28.2))
+#TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q28.2)))
+boxplot(EBPAS ~ Q6, data=infile3)
+
+# Q6 ~ Q29.1 ("Are you in a dual degre program?")
+summary(aov(infile3$Q6 ~ as.factor(infile3$Q29.1)))
+kwq6on29.1 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q29.1))
+#TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q29.1)))
+boxplot(EBPAS ~ Q6, data=infile3)
+
+# Q6 ~ Q29.2 ("If yes, which dual degree program")
+summary(aov(infile3$Q6 ~ as.factor(infile3$Q29.2)))
+kwq6on29.2 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q29.2))
+#TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q29.2)))
+boxplot(EBPAS ~ Q6, data=infile3)
+
+# Q6 ~ Q30.1
+summary(aov(infile3$Q6 ~ as.factor(infile3$Q30.1)))
+kwq6on30.1 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q30.1))
+#TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q30.1)))
+boxplot(EBPAS ~ Q6, data=infile3)
+
+# Q6 ~ Q30.2
+summary(aov(infile3$Q6 ~ as.factor(infile3$Q30.2)))
+kwq6on30.2 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q30.2))
+#TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q30.2)))
+boxplot(EBPAS ~ Q6, data=infile3)
+```
+
+##### Question 9
+```{r Education (No. 9) on Covariates, echo=FALSE, results='hide',fig.show='hide'}
+
+# Q9 ~ Q26
+summary(aov(infile3$Q9 ~ as.factor(infile3$Q26)))
+kwq9on26 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q26))
+#TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q26)))
+boxplot(EBPAS ~ Q9, data=infile3)
+
+# Q9 ~ Q27
+summary(aov(infile3$Q9 ~ as.factor(infile3$Q27)))
+kwq9on27 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q27))
+#TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q27)))
+boxplot(EBPAS ~ Q9, data=infile3)
+
+# Q9 ~ Q28.2 ("Year of Medical School")
+summary(aov(infile3$Q9 ~ as.factor(infile3$Q28.2)))
+kwq9on28.2 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q28.2))
+#TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q28.2)))
+boxplot(EBPAS ~ Q9, data=infile3)
+
+# Q9 ~ Q29.1 ("Are you in a dual degre program?")
+summary(aov(infile3$Q9 ~ as.factor(infile3$Q29.1)))
+kwq9on29.1 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q29.1))
+#TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q29.1)))
+boxplot(EBPAS ~ Q9, data=infile3)
+
+# Q9 ~ Q29.2 ("If yes, which dual degree program")
+summary(aov(infile3$Q9 ~ as.factor(infile3$Q29.2)))
+kwq9on29.2 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q29.2))
+#TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q29.2)))
+boxplot(EBPAS ~ Q9, data=infile3)
+
+# Q9 ~ Q30.1
+summary(aov(infile3$Q9 ~ as.factor(infile3$Q30.1)))
+kwq9on30.1 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q30.1))
+#TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q30.1)))
+boxplot(EBPAS ~ Q9, data=infile3)
+
+# Q9 ~ Q30.2
+summary(aov(infile3$Q9 ~ as.factor(infile3$Q30.2)))
+kwq9on30.2 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q30.2))
+#TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q30.2)))
+boxplot(EBPAS ~ Q9, data=infile3)
+```
+
+##### Question 11
+```{r Education (No. 11) on Covariates, echo=FALSE, results='hide',fig.show='hide'}
+
+# Q11 ~ Q26 (Age Range)
+summary(aov(infile3$Q11 ~ as.factor(infile3$Q26)))
+kwq11on26 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q26))
+#TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q26)))
+boxplot(EBPAS ~ Q11, data=infile3)
+
+# Q11 ~ Q27 (Gender)
+summary(aov(infile3$Q11 ~ as.factor(infile3$Q27)))
+kwq11on27 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q27))
+#TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q27)))
+boxplot(EBPAS ~ Q11, data=infile3)
+
+# Q11 ~ Q28.2 ("Year of Medical School")
+summary(aov(infile3$Q11 ~ as.factor(infile3$Q28.2)))
+kwq11on28.2 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q28.2))
+#TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q28.2)))
+boxplot(EBPAS ~ Q11, data=infile3)
+
+# Q11 ~ Q29.1 ("Are you in a dual degre program?")
+summary(aov(infile3$Q11 ~ as.factor(infile3$Q29.1)))
+kwq11on29.1 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q29.1))
+#TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q29.1)))
+boxplot(EBPAS ~ Q11, data=infile3)
+
+# Q11 ~ Q29.2 ("If yes, which dual degree program")
+summary(aov(infile3$Q11 ~ as.factor(infile3$Q29.2)))
+kwq11on29.2 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q29.2))
+#TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q29.2)))
+boxplot(EBPAS ~ Q11, data=infile3)
+
+# Q11 ~ Q30.1
+summary(aov(infile3$Q11 ~ as.factor(infile3$Q30.1)))
+kwq11on30.1 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q30.1))
+#TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q30.1)))
+boxplot(EBPAS ~ Q11, data=infile3)
+
+# Q11 ~ Q30.2
+summary(aov(infile3$Q11 ~ as.factor(infile3$Q30.2)))
+kwq11on30.2 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q30.2))
+#TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q30.2)))
+boxplot(EBPAS ~ Q11, data=infile3)
+```
+
+####  Summary Table of Education Question KW Results
+```{r KW-Table on Covariates, echo=FALSE}
+
+PCriticalKW <- 0.05/7
+
+print(c("Critical P-Value:  ", PCriticalKW) )
+
+### Question 3
+ed_3on26 <- kwq3on26$p.value 
+ed_3on27 <- kwq3on27$p.value 
+ed_3on28.2 <- kwq3on28.2$p.value 
+ed_3on29.1 <- kwq3on29.1$p.value 
+ed_3on29.2 <- kwq3on29.2$p.value 
+ed_3on30.1 <- kwq3on30.1$p.value 
+ed_3on30.2 <- kwq3on30.2$p.value 
+
+ed_3on26_adj <- kwq3on26$p.value < PCriticalKW
+ed_3on27_adj <- kwq3on27$p.value < PCriticalKW
+ed_3on28.2_adj <- kwq3on28.2$p.value < PCriticalKW
+ed_3on29.1_adj <- kwq3on29.1$p.value < PCriticalKW
+ed_3on29.2_adj <- kwq3on29.2$p.value < PCriticalKW
+ed_3on30.1_adj <- kwq3on30.1$p.value < PCriticalKW
+ed_3on30.2_adj <- kwq3on30.2$p.value < PCriticalKW
+
+out3covar <- t(
+                  data.frame(
+                   c(ed_3on26, ed_3on26_adj),
+                   c(ed_3on27, ed_3on27_adj),
+                   c(ed_3on28.2, ed_3on28.2_adj),
+                   c(ed_3on29.1, ed_3on29.1_adj),
+                   c(ed_3on29.2, ed_3on29.2_adj),
+                   c(ed_3on30.1, ed_3on30.1_adj),
+                   c(ed_3on30.2, ed_3on30.2_adj)
+                   )
+                )
+
+colnames(out3covar) <- c("P Value", "Significant (1=Yes, 0=No)")
+rownames(out3covar) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
+
+kable(out3covar,caption="Question 3 Covariate Analysis by KW Test")
+
+### Question 6
+ed_6on26 <- kwq6on26$p.value 
+ed_6on27 <- kwq6on27$p.value 
+ed_6on28.2 <- kwq6on28.2$p.value 
+ed_6on29.1 <- kwq6on29.1$p.value 
+ed_6on29.2 <- kwq6on29.2$p.value 
+ed_6on30.1 <- kwq6on30.1$p.value 
+ed_6on30.2 <- kwq6on30.2$p.value 
+
+ed_6on26_adj <- kwq6on26$p.value < PCriticalKW
+ed_6on27_adj <- kwq6on27$p.value < PCriticalKW
+ed_6on28.2_adj <- kwq6on28.2$p.value < PCriticalKW
+ed_6on29.1_adj <- kwq6on29.1$p.value < PCriticalKW
+ed_6on29.2_adj <- kwq6on29.2$p.value < PCriticalKW
+ed_6on30.1_adj <- kwq6on30.1$p.value < PCriticalKW
+ed_6on30.2_adj <- kwq6on30.2$p.value < PCriticalKW
+
+out6covar <- t(
+                  data.frame(
+                   c(ed_6on26, ed_6on26_adj),
+                   c(ed_6on27, ed_6on27_adj),
+                   c(ed_6on28.2, ed_6on28.2_adj),
+                   c(ed_6on29.1, ed_6on29.1_adj),
+                   c(ed_6on29.2, ed_6on29.2_adj),
+                   c(ed_6on30.1, ed_6on30.1_adj),
+                   c(ed_6on30.2, ed_6on30.2_adj)
+                   )
+                )
+
+colnames(out6covar) <- c("P Value", "Significant (1=Yes, 0=No)")
+rownames(out6covar) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
+
+kable(out6covar,caption="Question 6 Covariate Analysis by KW Test")
+
+### Question 9
+ed_9on26 <- kwq9on26$p.value 
+ed_9on27 <- kwq9on27$p.value 
+ed_9on28.2 <- kwq9on28.2$p.value 
+ed_9on29.1 <- kwq9on29.1$p.value 
+ed_9on29.2 <- kwq9on29.2$p.value 
+ed_9on30.1 <- kwq9on30.1$p.value 
+ed_9on30.2 <- kwq9on30.2$p.value 
+
+ed_9on26_adj <- kwq9on26$p.value < PCriticalKW
+ed_9on27_adj <- kwq9on27$p.value < PCriticalKW
+ed_9on28.2_adj <- kwq9on28.2$p.value < PCriticalKW
+ed_9on29.1_adj <- kwq9on29.1$p.value < PCriticalKW
+ed_9on29.2_adj <- kwq9on29.2$p.value < PCriticalKW
+ed_9on30.1_adj <- kwq9on30.1$p.value < PCriticalKW
+ed_9on30.2_adj <- kwq9on30.2$p.value < PCriticalKW
+
+out9covar <- t(
+                  data.frame(
+                   c(ed_9on26, ed_9on26_adj),
+                   c(ed_9on27, ed_9on27_adj),
+                   c(ed_9on28.2, ed_9on28.2_adj),
+                   c(ed_9on29.1, ed_9on29.1_adj),
+                   c(ed_9on29.2, ed_9on29.2_adj),
+                   c(ed_9on30.1, ed_9on30.1_adj),
+                   c(ed_9on30.2, ed_9on30.2_adj)
+                   )
+                )
+
+colnames(out9covar) <- c("P Value", "Significant (1=Yes, 0=No)")
+rownames(out9covar) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
+
+kable(out9covar,caption="Question 9 Covariate Analysis by KW Test")
+
+### Question 11
+ed_11on26 <- kwq11on26$p.value 
+ed_11on27 <- kwq11on27$p.value 
+ed_11on28.2 <- kwq11on28.2$p.value 
+ed_11on29.1 <- kwq11on29.1$p.value 
+ed_11on29.2 <- kwq11on29.2$p.value 
+ed_11on30.1 <- kwq11on30.1$p.value 
+ed_11on30.2 <- kwq11on30.2$p.value 
+
+ed_11on26_adj <- kwq11on26$p.value < PCriticalKW
+ed_11on27_adj <- kwq11on27$p.value < PCriticalKW
+ed_11on28.2_adj <- kwq11on28.2$p.value < PCriticalKW
+ed_11on29.1_adj <- kwq11on29.1$p.value < PCriticalKW
+ed_11on29.2_adj <- kwq11on29.2$p.value < PCriticalKW
+ed_11on30.1_adj <- kwq11on30.1$p.value < PCriticalKW
+ed_11on30.2_adj <- kwq11on30.2$p.value < PCriticalKW
+
+out11covar <- t(data.frame(c(ed_11on26, ed_11on26_adj),
+                   c(ed_11on27, ed_11on27_adj),
+                   c(ed_11on28.2, ed_11on28.2_adj),
+                   c(ed_11on29.1, ed_11on29.1_adj),
+                   c(ed_11on29.2, ed_11on29.2_adj),
+                   c(ed_11on30.1, ed_11on30.1_adj),
+                   c(ed_11on30.2, ed_11on30.2_adj)
+                   )
+                )
+
+colnames(out11covar) <- c("P Value", "Significant (1=Yes, 0=No)")
+rownames(out11covar) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
+
+kable(out11covar,caption="Question 11 Covariate Analysis by KW Test")
+```
+
+####  Post-Hoc Tests on Significant KW Tests
+
+We use the Dunn test to test for pairwise differences following KW significance tests. This is a non-parametric equivalent to the Tukey test folowing ANOVA.
+
+```{r Post-Hoc Dunn Tests for significant KW Tests, echo=FALSE}
+dunn.test(x=infile3$Q3, g=as.factor(infile3$Q28.2), method="bh", alpha=0.05,wrap=FALSE)
+dunn.test(x=infile3$Q6, g=as.factor(infile3$Q28.2), method="bh", alpha=0.05,wrap=FALSE)
+dunn.test(x=infile3$Q9, g=as.factor(infile3$Q30.1), method="bh", alpha=0.05,wrap=FALSE)
+dunn.test(x=infile3$Q11, g=as.factor(infile3$Q28.2), method="bh", alpha=0.05,wrap=FALSE)
+```
+
+## Genomic Testing Question Analysis (Pooled Q18-25)
+
+Because our Cronbach's Alpha was >0.90 for the two genomic testing sections, we can pool the data together and conduct analysis to test for associations with the covariates in questions 26-30.2.
+
+```{r Genomic Testing Question Analysis, echo=FALSE}
+
+infile3 <- mutate(infile3, genomics=Q18+Q19+Q20+Q21+Q22+Q23+Q24+Q25)
+
+par(mfrow=c(1,2))
+barplot(sort(infile3$genomics),xlab='Respondent',main="Sorted Totals for Genomics Total Score")
+hist(infile3$genomics,xlab="Genomics Score",breaks=11,main="Histogram of Genomics Total Score")
+
+gen_26 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q26)))
+gen_27 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q27)))
+gen_28.2 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q28.2)))
+gen_29.1 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q29.1)))
+gen_29.2 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q29.2)))
+gen_30.1 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q30.1)))
+gen_30.2 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q30.2)))
+
+# For this form of ANOVA, to access the P-Value, you unfortunately need to add [[5]][1] to the saved result.
+
+### Question 3
+gen_26_p <- gen_26[[5]][1]
+gen_27_p <- gen_27[[5]][1]
+gen_28.2_p <- gen_28.2[[5]][1]
+gen_29.1_p <- gen_29.1[[5]][1]
+gen_29.2_p <- gen_29.2[[5]][1]
+gen_30.1_p <- gen_30.1[[5]][1]
+gen_30.2_p <- gen_30.2[[5]][1]
+
+PCritical_Gen <- 0.05/7
+
+gen_26_p_adj <- gen_26[[5]][1] < PCritical_Gen
+gen_27_p_adj <- gen_27[[5]][1] < PCritical_Gen
+gen_28.2_p_adj <- gen_28.2[[5]][1] < PCritical_Gen
+gen_29.1_p_adj <- gen_29.1[[5]][1] < PCritical_Gen
+gen_29.2_p_adj <- gen_29.2[[5]][1] < PCritical_Gen
+gen_30.1_p_adj <- gen_30.1[[5]][1] < PCritical_Gen
+gen_30.2_p_adj <- gen_30.2[[5]][1] < PCritical_Gen
+
+gen_out_covar <- t(data.frame(
+                   c(gen_26_p, gen_26_p_adj),
+                   c(gen_27_p, gen_27_p_adj),
+                   c(gen_28.2_p, gen_28.2_p_adj),
+                   c(gen_29.1_p, gen_29.1_p_adj),
+                   c(gen_29.2_p, gen_29.2_p_adj),
+                   c(gen_30.1_p, gen_30.1_p_adj),
+                   c(gen_30.2_p, gen_30.2_p_adj)
+                   )
+                )
+
+colnames(gen_out_covar) <- c("P Value", "Significant (1=Yes, 0=No)")
+rownames(gen_out_covar) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
+
+kable(gen_out_covar,caption="Genomics Covariate ANOVA Analysis (P-Values)")
+```
+
+```{r}
+ddply(infile3, ~Q27, summarize, mean=mean(genomics, na.rm=TRUE), N=length(genomics))
+ddply(infile3, ~Q28.2, summarize, mean=mean(genomics, na.rm=TRUE), N=length(genomics))
+
+```
 
 

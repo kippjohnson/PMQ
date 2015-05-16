@@ -1,0 +1,36 @@
+To-Do list:
+
+1. Re-calculate Likert scores for EBPAS excluding education questions
+    i. EBPAS includes openness and divergence questions only (not education)
+    ii. Divergence answers should be reversed (check that this was done)
+    iii. I didn’t think of this in the meeting, but I’ll check if any 3 question subsets of the education questions have a higher C-alpha. It might be that one question is throwing things off. Because there are only four questions in total, I think it’s probably ok to do this statistically.
+
+2. Collapsed T-tests for EBPAS ~ Questions 13-25 (looking at entire cohort)
+
+3. Collapsed T-tests for questions 3, 6, 9, 11 alone (Education) ~ Questions 13-25. 
+
+4. Compute Cronbach's Alpha for "Comfort in genomic knowledge..." (Q18-21) and "Comfort in genomic ability..." (Q22-25) sections
+    i. If these are a > 0.7, we can do additional analysis on the section sums as a dependent variable. 
+    ii. We could also consider combining these eight questions as one section called something like “Genomic Testing Comfort and Knowledge/Ability.” I’ll do that just in case.
+
+5. Analysis by Chi-Square: I’ve been thinking about whether Chi-square is the best test here: Because our outcomes are technically categorical, I think it’s ok. I know that a some of this was done by Caroline, but it is probably best if I repeat it just to have all of the analysis together in one place.  
+    
+    a. EBPAS:
+    i. EBPAS ~ Age Range
+    ii. EBPAS ~ Gender
+    iii. EBPAS ~ Medical school year (collapsed as discussed into pre-didactic, pre-clinical, and clinical)
+    iv. EBPAS ~ Dual degree program (yes/no and maybe no/clinical/basic, depending upon how numbers work out)
+    v.  EBPAS ~ Interest in a career that involves research (yes/no or type of research interest possibly grouped, depending on how numbers work out)
+    vi. EBPAS ~ Genomic knowledge comfort 
+    vii. EBPAS ~ Genomic ability comfort 
+
+    b. Education Analysis: Individual educational questions treated similarly to EBPAS analysis above.
+    c. Genomic knowledge comfort: same as EBPAS excluding vi and vii
+    d. Genomic ability comfort: same as EBPAS excluding vi and vii
+    e. Genomic ability/knowledge grouping (possibly): Same as EBPAS excluding vi and vii
+
+6. Analysis by multiple linear regression (multiple simultaneous independent variables). Although we treated dependent variables as categorical in #5, I think treating them as continuous is acceptable. This was done in the paper. Basically, I’ll try to build models predicting EBPAS, individual educational questions, genomic testing knowledge, and genomic testing ability with the different covariates. I think exactly what i end up doing will depend on the results of #5.
+
+We’re also interested in building a model for question #15 after controlling for medical school year. Also some type of analysis for Q14 vs. Q15. 
+
+7. Summary statements for results.
