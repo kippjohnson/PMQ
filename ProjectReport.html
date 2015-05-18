@@ -68,18 +68,23 @@ img {
 </div>
 
 
-<p>Note: This analysis is conducted in R using R Markdown for report generation. The raw data as well as the source code for every table, figure, and calculation is accessible at <a href="https://www.github.com/kippjohnson/PMQ/" class="uri">https://www.github.com/kippjohnson/PMQ/</a></p>
-<p>Begin by calling packages which will be used later in the report:</p>
-<pre class="r"><code>library(knitr)
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>This analysis is conducted in R using R Markdown with Knitr for report generation. The raw data as well as the source code for every table, figure, and calculation is accessible at <a href="https://www.github.com/kippjohnson/PMQ/" class="uri">https://www.github.com/kippjohnson/PMQ/</a></p>
+<p>Much of the actual analysis code is omitted from being embedded in the printout of this report because it’s tedious to look at along with the results. However, it is completely available in the markdown file in the Github repository (ProjectReport.Rmd).</p>
+<p>NOTE: I got tired of typing “after correction for multiple testing” report. All P-Values which are reported as significant in this text have undergone correction for multiple testing using either the Bonferroni, Tukey honest significant differences method, or Benjami-Hochberg method. I usually use the Bonferroni method (0.05/n tests); in one section it makes more sense to use a more elaborate method (B-H) or Tukey, and it is stated when it is used. Tukey HSD is used following significant ANOVA results.</p>
+<p>If you are trying to replicate this report, ensure the following R packages are installed and loaded:</p>
+<pre class="r"><code>library(knitr) # For report generation, not strictly necessary to run code
 library(psych)
 library(dunn.test)</code></pre>
-<p>Reading in the data from the Github Repository (/kippjohnson/PMQ):</p>
+<p>R code for reading in the data from the Github Repository (/kippjohnson/PMQ):</p>
 <pre class="r"><code>rm(list=ls())
 tmp &lt;- tempfile()
 download.file(&quot;https://raw.githubusercontent.com/kippjohnson/PMQ/master/SurveyResponses.csv&quot;, destfile=tmp, method=&quot;curl&quot;)
 infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
-<div id="demographics" class="section level3">
-<h3>Demographics</h3>
+</div>
+<div id="survey-demographics-table" class="section level2">
+<h2>Survey Demographics Table</h2>
 <table>
 <thead>
 <tr class="header">
@@ -141,15 +146,16 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 </tr>
 </tbody>
 </table>
-</div>
 <div id="ebpas-statistics" class="section level3">
 <h3>EBPAS Statistics</h3>
-<p>The first step is to compute EBPAS total score, along with its subsets for scores of openness, and divergence. Education is not included in the EBPAS. Questions 1-12 excluding 3, 6, 9, and 11 define the EBPAS scale on the survey. 3, 6, 9, and 11 are the education questions. There are a number of people who did not completely fill out the first 12 questions of the survey, and for this analysis they will be dropped.</p>
-<p>Questions 2, 4, 5, and 8 are ‘divergence’ questions, where the questions have answers which have been formulated to be the inverse of the answering scale. They need to be reversed for our analysis.</p>
+<p>The first step is to compute EBPAS total score, along with its subsets for scores of openness, and divergence. Education is not included in the EBPAS. Questions 1-12 excluding 3, 6, 9, and 11 define the EBPAS scale on the survey. 3, 6, 9, and 11 are the education questions. There are a number of people who did not completely fill out the first 12 questions of the survey, and for the analysis they will be dropped because we have a large enough number of respondents without them.</p>
+<p>Questions 2, 4, 5, and 8 are ‘divergence’ questions, where the questions have answers which have been formulated to be the inverse of the answering scale. They have been reversed in our analysis.</p>
+<pre class="r"><code>infile2 &lt;- mutate(infile, total1to12 = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
+infile3 &lt;- infile2[-which(is.na(infile2$total1to12)),] #drop incompletes</code></pre>
 <p>Number of people who did not completely fill out the first 12 questions on the survey: <strong>17</strong></p>
-<p>Questions: - Will we drop all of these <strong>17</strong> individuals from the rest of the study?</p>
-<div id="cronbachs-alpha-calculations" class="section level4">
-<h4>Cronbach’s Alpha Calculations</h4>
+<p>Questions here: Do you agree with my decision to drop <strong>17</strong> individuals from the rest of the study? I think it was the best way to proceed, because we have a large number of responses without them and it makes everything harder and less reliable if we choose to proceed with a large amount of missing data.</p>
+<div id="initial-cronbachs-alpha-calculations" class="section level4">
+<h4><strong>Initial</strong> Cronbach’s Alpha Calculations</h4>
 <p>For Cronbach’s alpha, we use the alpha() function from the psych package in R. The EBPAS cronbach’s alpha is taken from the literature {0.78} (Overby et al., J Pers. Med. 2014), as was done in the paper from which we are modeling this.</p>
 <table>
 <thead>
@@ -237,19 +243,400 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 </tr>
 </tbody>
 </table>
+<p>As you can see, none of these are above 0.70, although the grouping of questions 3, 6, and 11 is close. Apparently question number 9 elicited different responses from the other three educational questions. We we do later find a different association for number 9 with our covariates than we do for questions 3, 6, and 11.</p>
 </div>
 </div>
-<div id="analysis-plan" class="section level2">
-<h2>Analysis Plan</h2>
+<div id="computing-cronbachs-alpha-for-questions-18-21-22-25-and-18-25-combined." class="section level3">
+<h3>Computing Cronbach’s alpha for questions 18-21, 22-25, and 18-25 combined.</h3>
+<p>Questions 18-21 ask the subject “How comfortable are you in your knowledge about [various genomic testing concepts].” Questions 22-25 ask the subject “How comfortable are you in your ability to [apply various genomic testing concepts in a clinical setting]”. We can also combine all 8 questions together as a general genomic familiarity category. To see if these sections assessed the same central ability, we can compute Cronbach’s alpha for each of them:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="right">Questions 18-21 Alpha</th>
+<th align="right">Questions 22-25 Alpha</th>
+<th align="right">Questions 18-25 (Combined) Alpha</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">0.9012832</td>
+<td align="right">0.9272846</td>
+<td align="right">0.9338605</td>
+</tr>
+</tbody>
+</table>
+<p>As you can see, the Cronbach’s alpha for these sections are extremely high.</p>
+</div>
+</div>
+<div id="data-analysis-significance-tests" class="section level2">
+<h2>Data Analysis &amp; Significance Tests</h2>
 <div id="step-1-frequencies" class="section level4">
 <h4>Step 1: Frequencies</h4>
-<p><em>Question Response Frequencies</em>: Tables of each question’s (13-25) response frequency. These questions include:</p>
+<p><em>Question Response Frequencies</em>: Tables of each question’s (1-25) response frequency. These questions are categorized as:</p>
 <ul>
+<li>EBPAS &amp; education questions (1-12)</li>
 <li>Attitudes toward DTC (13-15)</li>
 <li>Comfort using technology (16, 17)</li>
 <li>Knowledge of genomic testing concepts (18-21)</li>
 <li>Ability to understand genomic testing concepts (22-25)</li>
 </ul>
+<p>The coding for the question responses is given in the file “DataCoding.txt” in the Github repository. Most of the time it’s obvious.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 1</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">2</td>
+<td align="left">7</td>
+</tr>
+<tr class="even">
+<td align="left">3</td>
+<td align="left">48</td>
+</tr>
+<tr class="odd">
+<td align="left">4</td>
+<td align="left">74</td>
+</tr>
+<tr class="even">
+<td align="left">5</td>
+<td align="left">82</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 2</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">15</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">41</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">93</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">51</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">11</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 3</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">70</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">72</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">46</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">8</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">5</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 4</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">116</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">49</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">20</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">17</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">7</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 5</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">13</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">26</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">79</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">67</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">25</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 6</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">95</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">71</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">31</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">11</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">2</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 7</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">2</td>
+<td align="left">20</td>
+</tr>
+<tr class="even">
+<td align="left">3</td>
+<td align="left">64</td>
+</tr>
+<tr class="odd">
+<td align="left">4</td>
+<td align="left">77</td>
+</tr>
+<tr class="even">
+<td align="left">5</td>
+<td align="left">48</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 8</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">126</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">60</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">17</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">5</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">3</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 9</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">1</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">7</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">35</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">76</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">91</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 10</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">1</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">10</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">55</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">84</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">59</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 11</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">1</td>
+<td align="left">39</td>
+</tr>
+<tr class="even">
+<td align="left">2</td>
+<td align="left">55</td>
+</tr>
+<tr class="odd">
+<td align="left">3</td>
+<td align="left">71</td>
+</tr>
+<tr class="even">
+<td align="left">4</td>
+<td align="left">30</td>
+</tr>
+<tr class="odd">
+<td align="left">5</td>
+<td align="left">6</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Question 12</th>
+<th align="left">Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">0</td>
+<td align="left">1</td>
+</tr>
+<tr class="even">
+<td align="left">1</td>
+<td align="left">6</td>
+</tr>
+<tr class="odd">
+<td align="left">2</td>
+<td align="left">31</td>
+</tr>
+<tr class="even">
+<td align="left">3</td>
+<td align="left">74</td>
+</tr>
+<tr class="odd">
+<td align="left">4</td>
+<td align="left">67</td>
+</tr>
+<tr class="even">
+<td align="left">5</td>
+<td align="left">30</td>
+</tr>
+</tbody>
+</table>
 <table>
 <thead>
 <tr class="header">
@@ -621,10 +1008,10 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 </tbody>
 </table>
 </div>
-<div id="step-2-t-tests" class="section level3">
-<h3>Step 2: T-Tests</h3>
+<div id="step-2-ebpas-collapsed-t-tests" class="section level3">
+<h3>Step 2: EBPAS Collapsed T-Tests</h3>
 <p>First, answers for questions 13-25 were tested for an association with EBPAS Score (Questions 1-12 excluding the education questions) using ANOVA followed by Tukey Honest Signficant Differences. Second, the answers were collapsed into binary categories and T-tests for association with EBPAS score were performed.</p>
-<p>The R output for each ANOVA, Tukey-HSD, and Collapsed T-test is shown below. After the end of the output there is a table summarizing the results in a fashion analagous to Table 6 in Overby et al.</p>
+<p>The R output for each ANOVA and Collapsed T-test is shown below. After the end of the output there is a table summarizing the results in a fashion analagous to Table 6 in Overby et al.</p>
 <p>The format for each ANOVA is EBPAS ~ Question Answer Choices. After that, if the ANOVA is significant, a Tukey HSD test is computed. The TukeyHSD test shows which answer choices in the ANOVA results are actually associated with significantly different EBPAS scores.</p>
 <p>The collapsed T-tests were collapsed by assigning the responses in the first three Likert Groups to one group (For example, “Not At All Comfortable, Not Very Comfortable, and Neither Comfortable nor Uncomfortable” were collapsed to <em>Group 1</em>), and collapsing the remaining Likery Groups to a second group (“Comfortable and Very Comfortable were assigned to <em>Group Two</em>”)</p>
 <p>Note: The EBPAS scores totals are approximately normal by visual analysis:</p>
@@ -1355,13 +1742,29 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 </tr>
 </tbody>
 </table>
+<pre><code>##   Q19c   n     mean
+## 1    1 130 24.12308
+## 2    2  65 26.15385</code></pre>
+<pre><code>##   Q22c   n     mean
+## 1    1 169 24.47929
+## 2    2  25 26.92000
+## 3   NA   1 26.00000</code></pre>
+<pre><code>##   Q25c   n     mean
+## 1    1 175 24.54286
+## 2    2  20 27.05000</code></pre>
+<p>After correction for multiple testing, EBPAS is significantly associated with questions 19, 22, and 25.</p>
+<ul>
+<li>On question 19, those who answered “not at all/not very/neither comfortable not uncomfortable” had a significantly lower EBPAS score than those who answered “comfortable or very comfortable” (P=&lt;0.0001)</li>
+<li>On question 22, those who answered “not at all/not very/neither comfortable not uncomfortable” had a significantly lower EBPAS score than those who answered “comfortable or very comfortable” (P=&lt;0.0004)</li>
+<li>On question 23, those who answered “not at all/not very/neither comfortable not uncomfortable” had a significantly lower EBPAS score than those who answered “comfortable or very comfortable” (P=&lt;0.0004)</li>
+</ul>
 </div>
 </div>
 <div id="statistical-tests-anova-and-collapsed-t-tests-for-four-education-questions" class="section level3">
 <h3>Statistical Tests (ANOVA and Collapsed T-tests) for four education questions</h3>
 <p>In the previous section, we performed ANOVA and collapsed T tests for the 8 EBPAS questions on the predictor questions 13-25. For the education questions 3, 6, 9, and 11, we cannot combine them into one category because Cronbach’s alpha is &lt;0.7 for them. However, we can analyze the questions individually, as is done here:</p>
-<div id="tests-for-association-with-education-question-3" class="section level5">
-<h5>Tests for association with Education question 3</h5>
+<div id="t-tests-for-association-with-education-question-3" class="section level5">
+<h5>T-Tests for association with Education question 3</h5>
 <pre><code>## 
 ## 
 ##                 P Value   Significant (1=Yes, 0=No)
@@ -1378,11 +1781,59 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 ## Question 22    0.012618                           0
 ## Question 23    0.000013                           1
 ## Question 24    0.000075                           1
-## Question 25    0.007914                           0</code></pre>
+## Question 25    0.007914                           0
+## 
+##   Q15c   n     mean
+## 1    1 124 1.822581
+## 2    2  69 2.405797
+## 3   NA   2 1.500000
+##   Q18c   n     mean
+## 1    1  88 1.772727
+## 2    2 107 2.233645
+##   Q19c   n     mean
+## 1    1 130 1.769231
+## 2    2  65 2.538462
+##   Q23c   n     mean
+## 1    1 149 1.832215
+## 2    2  46 2.652174
+##   Q24c   n     mean
+## 1    1 157 1.859873
+## 2    2  38 2.710526</code></pre>
+<ul>
+<li>Those who answered question 15 (“I know enough about genomic to undestand DTC”) as either strongly/ siagree/disagree/uncertain had a significantly lower agreement with the statement “My medical education has adequately prepared me to practice personalized medicine” than those who answered the question as agree or strongly agree (p=0.000214)</li>
+<li>Those who answered question 18 (“Basic genomic testing concepts and terminology?”) as either not at all comfortable/not very comfortable/neither comfortable nor uncomfortable had a significantly lower agreement with the statement “My medical education has adequately prepared me to practice personalized medicine” than those who answered the question&quot; than those who answered the question as comfortable or very comfortable</li>
+<li>Those who answered question 19 (“Pharmacogenomics?”) as either not at all comfortable/not very comfortable/neither comfortable nor uncomfortable had a significantly lower agreement with the statement “My medical education has adequately prepared me to practice personalized medicine” than those who answered the question&quot; than those who answered the question as comfortable or very comfortable.</li>
+<li>Those who answered question 23 (“Understand genomic test results?”) as either not at all comfortable/not very comfortable/neither comfortable nor uncomfortable had a significantly lower agreement with the statement “My medical education has adequately prepared me to practice personalized medicine” than those who answered the question&quot; than those who answered the question as comfortable or very comfortable.</li>
+<li>Those who answered question 24 (“Explain genomic test results”) as either not at all comfortable/not very comfortable/neither comfortable nor uncomfortable had a significantly lower agreement with the statement “My medical education has adequately prepared me to practice personalized medicine” than those who answered the question&quot; than those who answered the question as comfortable or very comfortable.</li>
+</ul>
 </div>
-<div id="tests-for-association-with-education-question-6" class="section level5">
-<h5>Tests for association with Education question 6</h5>
-<pre><code>## 
+<div id="t-tests-for-association-with-education-question-6" class="section level5">
+<h5>T-Tests for association with Education question 6</h5>
+<pre><code>##   Q15c   n     mean
+## 1    1 124 1.612903
+## 2    2  69 2.275362
+## 3   NA   2 2.000000
+##   Q18c   n     mean
+## 1    1  88 1.602273
+## 2    2 107 2.056075
+##   Q19c   n     mean
+## 1    1 130 1.623077
+## 2    2  65 2.307692
+##   Q20c   n     mean
+## 1    1 108 1.620370
+## 2    2  86 2.151163
+## 3   NA   1 1.000000
+##   Q21c   n     mean
+## 1    1 129 1.674419
+## 2    2  65 2.215385
+## 3   NA   1 1.000000
+##   Q23c   n     mean
+## 1    1 149 1.684564
+## 2    2  46 2.391304
+##   Q24c   n     mean
+## 1    1 157 1.732484
+## 2    2  38 2.342105
+## 
 ## 
 ##                 P Value   Significant (1=Yes, 0=No)
 ## ------------  ---------  --------------------------
@@ -1399,9 +1850,18 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 ## Question 23    0.000110                           1
 ## Question 24    0.002058                           1
 ## Question 25    0.005217                           0</code></pre>
+<ul>
+<li>Those who answered question number 15 (“I know enought about genetics and genomics to understand DTC”) as either strongly disagree, disagree, or uncertain had a significantly lower agreement with the statement “I know whom to ask questions regarding genomic testing questions” than those who answered the question as agree or strongly agree.</li>
+<li>Those who answered question number 18 (“Basic genomic testing concepts and terminology”) as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement “I know whom to ask questions regarding genomic testing questions” than those who answered the question as comfortable or very comfortable.</li>
+<li>Those who answered question number 19 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement “I know whom to ask questions regarding genomic testing questions” than those who answered the question as comfortable or very comfortable.</li>
+<li>Those who answered question number 20 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement “I know whom to ask questions regarding genomic testing questions” than those who answered the question as comfortable or very comfortable.</li>
+<li>Those who answered question number 21 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement “I know whom to ask questions regarding genomic testing questions” than those who answered the question as comfortable or very comfortable.</li>
+<li>Those who answered question number 23 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement “I know whom to ask questions regarding genomic testing questions” than those who answered the question as comfortable or very comfortable.</li>
+<li>Those who answered question number 24 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement “I know whom to ask questions regarding genomic testing questions” than those who answered the question as comfortable or very comfortable.</li>
+</ul>
 </div>
-<div id="tests-for-association-with-education-question-9" class="section level5">
-<h5>Tests for association with Education question 9</h5>
+<div id="t-tests-for-association-with-education-question-9" class="section level5">
+<h5>T-Tests for association with Education question 9</h5>
 <pre><code>## 
 ## 
 ##                 P Value   Significant (1=Yes, 0=No)
@@ -1419,9 +1879,10 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 ## Question 23    0.812732                           0
 ## Question 24    0.572405                           0
 ## Question 25    0.382568                           0</code></pre>
+<p>There were no significant associations using collapsed T-tests for question nine.</p>
 </div>
-<div id="tests-for-association-with-education-question-11" class="section level5">
-<h5>Tests for association with Education question 11</h5>
+<div id="t-tests-for-association-with-education-question-11" class="section level5">
+<h5>T-Tests for association with Education question 11</h5>
 <pre><code>## 
 ## 
 ##                 P Value   Significant (1=Yes, 0=No)
@@ -1439,175 +1900,86 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 ## Question 23    0.016217                           0
 ## Question 24    0.073376                           0
 ## Question 25    0.002805                           1</code></pre>
+<ul>
+<li>Those who answered question number 15 as either strongly disagree, disagree, or uncertain had a significantly lower agreement with the statement “My professors have encouraged the use of personalized medicine” than those who answered the question as agree or strongly agree.</li>
+<li>Those who answered question number 19 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement “My professors have encouraged the use of personalized medicine” than those who answered the question as comfortable or very comfortable.</li>
+<li>Those who answered question number 25 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement “My professors have encouraged the use of personalized medicine” than those who answered the question as comfortable or very comfortable.</li>
+</ul>
 </div>
 </div>
-<div id="computing-cronbachs-alpha-for-questions-18-21-22-25-and-18-25-combined." class="section level3">
-<h3>Computing Cronbach’s alpha for questions 18-21, 22-25, and 18-25 combined.</h3>
-<p>Questions 18-21 ask the subject “How comfortable are you in your knowledge about […]” various genomic testing concepts. Questions 22-25 ask the subject “How comfortable are you in your ability to […]” apply various genomic testing concepts in a clinical setting. We can also combine all 8 questions together as a general genomic familiarity category. To see if these sections assessed the same central ability, we can compute Cronbach’s alpha for each of them:</p>
-<table>
-<thead>
-<tr class="header">
-<th align="right">Questions 18-21 Alpha</th>
-<th align="right">Questions 22-25 Alpha</th>
-<th align="right">Questions 18-25 (Combined) Alpha</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="right">0.9012832</td>
-<td align="right">0.9272846</td>
-<td align="right">0.9338605</td>
-</tr>
-</tbody>
-</table>
-<p>As we can see, the Cronbach’s alpha for these three sections are extremely high. We should consider further how we want to analyze these questions. As of now, we are testing the sum of the two categories pooled together for association with the covariates.</p>
 </div>
+<div id="covariate-analysis" class="section level2">
+<h2>Covariate Analysis</h2>
+<div id="further-ebpas-analyses-against-covariates-using-anova-questions-26-31.2" class="section level3">
+<h3>Further EBPAS Analyses (against covariates using ANOVA, Questions 26-31.2)</h3>
+<p>Because EBPAS score is a continuous vector of integers and is approximately normally distributed, the appropriate test to use here is ANOVA. We are looking now for associations between EBPAS and the covariates.</p>
+<div id="covariate-grouping" class="section level5">
+<h5>Covariate Grouping</h5>
+<p>We need to create a new grouping from Question 28.2 (Year of medical school). We are just merging the M3 and M4 students into one “clinical” grouping, while coding M1s as “pre-didactic” and M2s as “pre-clinical” as was done in Caroline’s Poster. The new vector we create is called Q28.2c (“c” for collapsed).</p>
+<pre class="r"><code>infile3$Q28.2c &lt;- infile3$Q28.2
+infile3$Q28.2c[infile3$Q28.2c==4] &lt;- 3
+clinical_grouping_table &lt;- table(infile3$Q28.2c) </code></pre>
+<p>In the study, there are 51 pre-didactic students, 63 pre-clinical students, and 79 clinical students.</p>
 </div>
-<div id="further-ebpas-analyses" class="section level2">
-<h2>Further EBPAS Analyses</h2>
-<p>Because EBPAS score is a continuous vector of integers and is approximately normally distributed, the appropriate test to use here is ANOVA.</p>
 <div id="ebpas-anovas" class="section level4">
 <h4>EBPAS ANOVAs</h4>
 <pre><code>##                         Df Sum Sq Mean Sq F value Pr(&gt;F)
 ## as.factor(infile3$Q26)   2    6.5   3.245   0.262   0.77
 ## Residuals              191 2364.2  12.378               
 ## 1 observation deleted due to missingness</code></pre>
-<pre><code>##   Tukey multiple comparisons of means
-##     95% family-wise confidence level
-## 
-## Fit: aov(formula = infile3$EBPAS ~ as.factor(infile3$Q26))
-## 
-## $`as.factor(infile3$Q26)`
-##           diff       lwr      upr     p adj
-## 2-1 -0.1066667 -1.559815 1.346482 0.9835640
-## 3-1 -0.4426230 -1.966758 1.081512 0.7719527
-## 3-2 -0.3359563 -1.768813 1.096900 0.8446322</code></pre>
+<p>EBPAS not significantly associated wtih question 26 on ANOVA.</p>
 <pre><code>##                         Df Sum Sq Mean Sq F value Pr(&gt;F)
 ## as.factor(infile3$Q27)   1   10.2   10.21   0.826  0.364
 ## Residuals              191 2359.8   12.36               
 ## 2 observations deleted due to missingness</code></pre>
-<pre><code>##   Tukey multiple comparisons of means
-##     95% family-wise confidence level
-## 
-## Fit: aov(formula = infile3$EBPAS ~ as.factor(infile3$Q27))
-## 
-## $`as.factor(infile3$Q27)`
-##           diff       lwr       upr     p adj
-## 1-0 -0.4610572 -1.461445 0.5393306 0.3644613</code></pre>
-<pre><code>##                           Df Sum Sq Mean Sq F value Pr(&gt;F)
-## as.factor(infile3$Q28.2)   3   33.5   11.17   0.905   0.44
-## Residuals                189 2331.0   12.33               
+<p>EBPAS not significantly associated with question 27 on ANOVA.</p>
+<pre><code>##                            Df Sum Sq Mean Sq F value Pr(&gt;F)
+## as.factor(infile3$Q28.2c)   2   13.4   6.681    0.54  0.584
+## Residuals                 190 2351.1  12.374               
 ## 2 observations deleted due to missingness</code></pre>
-<pre><code>##   Tukey multiple comparisons of means
-##     95% family-wise confidence level
-## 
-## Fit: aov(formula = infile3$EBPAS ~ as.factor(infile3$Q28.2))
-## 
-## $`as.factor(infile3$Q28.2)`
-##             diff       lwr       upr     p adj
-## 2-1  0.346405229 -1.368257 2.0610671 0.9532983
-## 3-1 -0.006641366 -1.727478 1.7141955 0.9999996
-## 4-1 -1.235294118 -3.784626 1.3140375 0.5920738
-## 3-2 -0.353046595 -1.981481 1.2753880 0.9431676
-## 4-2 -1.581699346 -4.069592 0.9061936 0.3544311
-## 4-3 -1.228652751 -3.720806 1.2635000 0.5781317</code></pre>
+<p>EBPAS not significantly associated wtih question 28.2c on ANOVA.</p>
 <pre><code>##                           Df Sum Sq Mean Sq F value Pr(&gt;F)
 ## as.factor(infile3$Q29.1)   1    0.4   0.355   0.029  0.866
 ## Residuals                191 2361.0  12.361               
 ## 2 observations deleted due to missingness</code></pre>
-<pre><code>##   Tukey multiple comparisons of means
-##     95% family-wise confidence level
-## 
-## Fit: aov(formula = infile3$EBPAS ~ as.factor(infile3$Q29.1))
-## 
-## $`as.factor(infile3$Q29.1)`
-##          diff       lwr      upr     p adj
-## 1-0 0.1200589 -1.276946 1.517064 0.8655719</code></pre>
+<p>EBPAS not significantly associated wtih question 29.1 on ANOVA.</p>
 <pre><code>##                          Df Sum Sq Mean Sq F value Pr(&gt;F)  
 ## as.factor(infile3$Q29.2)  2   70.9   35.45   2.528 0.0979 .
 ## Residuals                28  392.6   14.02                 
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 164 observations deleted due to missingness</code></pre>
-<pre><code>##   Tukey multiple comparisons of means
-##     95% family-wise confidence level
-## 
-## Fit: aov(formula = infile3$EBPAS ~ as.factor(infile3$Q29.2))
-## 
-## $`as.factor(infile3$Q29.2)`
-##           diff       lwr       upr     p adj
-## 2-1 -0.2916667 -4.727289 4.1439555 0.9855196
-## 3-1 -3.4027778 -7.263491 0.4579357 0.0921228
-## 3-2 -3.1111111 -7.994570 1.7723481 0.2723088</code></pre>
+<p>EBPAS not significantly associated wtih question 29.2 on ANOVA.</p>
 <pre><code>##                           Df Sum Sq Mean Sq F value Pr(&gt;F)
 ## as.factor(infile3$Q30.1)   2   20.1   10.05   0.839  0.434
 ## Residuals                191 2287.3   11.97               
 ## 1 observation deleted due to missingness</code></pre>
-<pre><code>##   Tukey multiple comparisons of means
-##     95% family-wise confidence level
-## 
-## Fit: aov(formula = infile3$EBPAS ~ as.factor(infile3$Q30.1))
-## 
-## $`as.factor(infile3$Q30.1)`
-##           diff       lwr       upr     p adj
-## 1-0 -0.5294872 -2.223511 1.1645367 0.7410297
-## 2-0 -0.9833333 -2.811136 0.8444698 0.4134274
-## 2-1 -0.4538462 -1.779024 0.8713313 0.6979267</code></pre>
+<p>EBPAS not significantly associated wtih question 30.1 on ANOVA.</p>
 <pre><code>##                           Df Sum Sq Mean Sq F value Pr(&gt;F)
 ## as.factor(infile3$Q30.2)   7    116   16.57   1.501  0.172
 ## Residuals                141   1556   11.04               
 ## 46 observations deleted due to missingness</code></pre>
-<pre><code>##   Tukey multiple comparisons of means
-##     95% family-wise confidence level
-## 
-## Fit: aov(formula = infile3$EBPAS ~ as.factor(infile3$Q30.2))
-## 
-## $`as.factor(infile3$Q30.2)`
-##                diff         lwr      upr     p adj
-## 2-1       0.5166667  -2.1229277 3.156261 0.9988037
-## 3-1      -0.3166667  -4.6939387 4.060605 0.9999986
-## 4-1      -1.1261905  -3.4659408 1.213560 0.8162945
-## 12-1      1.3738095  -1.2182207 3.965840 0.7308905
-## 23-1      0.5166667  -6.8316530 7.864986 0.9999988
-## 123-1     1.6984848  -1.6545651 5.051535 0.7738244
-## 1234-1   -2.4833333 -12.7912788 7.824612 0.9955400
-## 3-2      -0.8333333  -5.5919297 3.925263 0.9994206
-## 4-2      -1.6428571  -4.6358758 1.350162 0.6943744
-## 12-2      0.8571429  -2.3369689 4.051255 0.9913826
-## 23-2      0.0000000  -7.5816576 7.581658 1.0000000
-## 123-2     1.1818182  -2.6557166 5.019353 0.9806564
-## 1234-2   -3.0000000 -13.4755654 7.475565 0.9873123
-## 4-3      -0.8095238  -5.4085686 3.789521 0.9994008
-## 12-3      1.6904762  -3.0419019 6.422854 0.9560592
-## 23-3      0.8333333  -7.5137969 9.180464 0.9999869
-## 123-3     2.0151515  -3.1732707 7.203574 0.9321554
-## 1234-3   -2.1666667 -13.2088821 8.875549 0.9987846
-## 12-4      2.5000000  -0.4511562 5.451156 0.1623139
-## 23-4      1.6428571  -5.8396895 9.125404 0.9975062
-## 123-4     2.8246753  -0.8131326 6.462483 0.2548161
-## 1234-4   -1.3571429 -11.7612018 9.046916 0.9999188
-## 23-12    -0.8571429  -8.4223721 6.708086 0.9999688
-## 123-12    0.3246753  -3.4802998 4.129650 0.9999955
-## 1234-12  -3.8571429 -14.3208244 6.606539 0.9481349
-## 123-23    1.1818182  -6.6767451 9.040382 0.9997887
-## 1234-23  -3.0000000 -15.5206954 9.520695 0.9956884
-## 1234-123 -4.1818182 -14.8595031 6.495867 0.9292490</code></pre>
+<p>EBPAS not significantly associated wtih question 30.2 on ANOVA.</p>
 </div>
 </div>
-<div id="education-question-covariate-analysis" class="section level2">
-<h2>Education Question Covariate Analysis</h2>
+<div id="education-question-covariate-analysis" class="section level3">
+<h3>Education Question Covariate Analysis</h3>
 <p>I elected to use the Kruskal-Wallis test on the Likert Data instead of ANOVA. Chi-Square assumptions are usually not met without further grouping. KW test is a non-parametric version of one-way ANOVA appropriate here because of ordinal data. The results are summarized in the table below. Correction was done for multiple testing.</p>
 <div id="question-3" class="section level5">
 <h5>Question 3</h5>
+<p>See table below, output omitted for brevity</p>
 </div>
 <div id="question-6" class="section level5">
 <h5>Question 6</h5>
+<p>See table below, output omitted for brevity</p>
 </div>
 <div id="question-9" class="section level5">
 <h5>Question 9</h5>
+<p>See table below, output omitted for brevity</p>
 </div>
 <div id="question-11" class="section level5">
 <h5>Question 11</h5>
+<p>See table below, output omitted for brevity</p>
 </div>
 <div id="summary-table-of-education-question-kw-results" class="section level4">
 <h4>Summary Table of Education Question KW Results</h4>
@@ -1633,7 +2005,7 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 <td align="right">0</td>
 </tr>
 <tr class="odd">
-<td align="left">Question 28.2</td>
+<td align="left">Question 28.2c</td>
 <td align="right">0.0000000</td>
 <td align="right">1</td>
 </tr>
@@ -1680,8 +2052,8 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 <td align="right">0</td>
 </tr>
 <tr class="odd">
-<td align="left">Question 28.2</td>
-<td align="right">0.0015859</td>
+<td align="left">Question 28.2c</td>
+<td align="right">0.0006684</td>
 <td align="right">1</td>
 </tr>
 <tr class="even">
@@ -1727,8 +2099,8 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 <td align="right">0</td>
 </tr>
 <tr class="odd">
-<td align="left">Question 28.2</td>
-<td align="right">0.0445645</td>
+<td align="left">Question 28.2c</td>
+<td align="right">0.0185659</td>
 <td align="right">0</td>
 </tr>
 <tr class="even">
@@ -1774,8 +2146,8 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 <td align="right">0</td>
 </tr>
 <tr class="odd">
-<td align="left">Question 28.2</td>
-<td align="right">0.0000002</td>
+<td align="left">Question 28.2c</td>
+<td align="right">0.0000001</td>
 <td align="right">1</td>
 </tr>
 <tr class="even">
@@ -1800,48 +2172,71 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 </tr>
 </tbody>
 </table>
+<ul>
+<li>Question 3 is signficiant for an association with clinical grouping (28.2c)</li>
+<li>Question 6 is signficiant for an association with clinical grouping (28.2c)</li>
+<li>Question 9 is signficiant for an association with interest in a research career (30.1)</li>
+<li>Question 11 is signficiant for an association with clinical grouping (28.2c)</li>
+</ul>
+<p>More detail on these significant results in the next section.</p>
 </div>
 <div id="post-hoc-tests-on-significant-kw-tests" class="section level4">
 <h4>Post-Hoc Tests on Significant KW Tests</h4>
-<p>We use the Dunn test to test for pairwise differences following KW significance tests. This is a non-parametric equivalent to the Tukey test folowing ANOVA.</p>
+<p>We use the Dunn test to test for pairwise differences following KW significance tests. This is a non-parametric equivalent to the Tukey test folowing ANOVA. The multiple-comparisons correction here is for family-wise error rate (FWER) using the Benjamini-Hochberg method as implemented in the dunn.test R package.</p>
+<div id="question-three" class="section level5">
+<h5>Question Three:</h5>
 <pre><code>##   Kruskal-Wallis rank sum test
 ## 
 ## data: x and group
-## Kruskal-Wallis chi-squared = 43.8915, df = 3, p-value = 0
+## Kruskal-Wallis chi-squared = 43.8087, df = 2, p-value = 0
 ## 
 ## 
 ##                            Comparison of x by group                            
 ##                              (Benjamini-Hochberg)                              
 ## Col Mean-|
-## Row Mean |          1          2          3
-## ---------+---------------------------------
+## Row Mean |          1          2
+## ---------+----------------------
 ##        2 |   6.105813
 ##          |    0.0000*
 ##          |
-##        3 |   5.250945  -0.880222
-##          |    0.0000*     0.2841
-##          |
-##        4 |   3.825861  -0.287800   0.287851
-##          |    0.0001*     0.3867     0.4641</code></pre>
+##        3 |   5.620559  -0.831828
+##          |    0.0000*     0.2028</code></pre>
+<pre><code>##   Q28.2c     mean median  N
+## 1      1 1.411765    1.0 51
+## 2      2 2.333333    2.0 63
+## 3      3 2.189873    2.0 79
+## 4     NA 1.500000    1.5  2</code></pre>
+<p>For question three’s significant association with clinical year, we find that group 1 (pre-didactic) is significantly different from group 2 and 3 (pre-clinical and clinical). The pre-clinical and clinical groups are not significantly different from each other.</p>
+<p>Pre-didactic students are significantly less likely to agree with the statement “My medical education has adequately prepared me to practice personalized medication” than are either pre-clinical or clinical students.</p>
+</div>
+<div id="question-six" class="section level5">
+<h5>Question Six:</h5>
 <pre><code>##   Kruskal-Wallis rank sum test
 ## 
 ## data: x and group
-## Kruskal-Wallis chi-squared = 15.2887, df = 3, p-value = 0
+## Kruskal-Wallis chi-squared = 14.6214, df = 2, p-value = 0
 ## 
 ## 
 ##                            Comparison of x by group                            
 ##                              (Benjamini-Hochberg)                              
 ## Col Mean-|
-## Row Mean |          1          2          3
-## ---------+---------------------------------
+## Row Mean |          1          2
+## ---------+----------------------
 ##        2 |   3.708045
-##          |    0.0006*
+##          |    0.0003*
 ##          |
-##        3 |   3.019430  -0.713627
-##          |    0.0038*     0.2377
-##          |
-##        4 |   1.239599  -1.285382  -0.816882
-##          |     0.1613     0.1987     0.2484</code></pre>
+##        3 |   2.909763  -1.040703
+##          |    0.0027*     0.1490</code></pre>
+<pre><code>##   Q28.2c     mean median  N
+## 1      1 1.529412    1.0 51
+## 2      2 2.047619    2.0 63
+## 3      3 1.911392    2.0 79
+## 4     NA 1.500000    1.5  2</code></pre>
+<p>For question six’s significant association with clinical year, we find that group 1 (pre-didactic) is significantly different from group 2 and 3 (pre-clinical and clinical). The pre-clinical and clinical groups are not significantly different from each other.</p>
+<p>Pre-clinical students are significantly less likely to agree with the statement “I know whom to ask questions regarding genomic testing” than are either pre-clinical or clinical students. The pre-clinical and clinical groups were not significantly different from each other.</p>
+</div>
+<div id="question-nine" class="section level5">
+<h5>Question Nine:</h5>
 <pre><code>##   Kruskal-Wallis rank sum test
 ## 
 ## data: x and group
@@ -1858,25 +2253,37 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 ##          |
 ##        2 |  -0.606434  -3.184789
 ##          |     0.2721    0.0022*</code></pre>
+<pre><code>##   Q30.1     mean median   N
+## 1     0 3.966667      4  30
+## 2     1 4.346154      5 104
+## 3     2 3.916667      4  60
+## 4    NA 5.000000      5   1</code></pre>
+<p>For educational question nine, those who do not want to have a research career (“0”) are significantly different from those who do want a research career, but not significantly different from those who are not sure if they want a research career. Those who do want a research career are significantly different from those who do not want a research career and those who are not sure if they want a research career.</p>
+<p>Students who want a research career are significantly more likely to agree with the statement “I think it is important to learn about personalized medicine” than both students who are not sure if they want a research career and students who do not want a research career. Students who do not want a research career are not significantly different in their agreement with this statement than those who do not know if they want a research career.</p>
 <pre><code>##   Kruskal-Wallis rank sum test
 ## 
 ## data: x and group
-## Kruskal-Wallis chi-squared = 33.604, df = 3, p-value = 0
+## Kruskal-Wallis chi-squared = 32.9494, df = 2, p-value = 0
 ## 
 ## 
 ##                            Comparison of x by group                            
 ##                              (Benjamini-Hochberg)                              
 ## Col Mean-|
-## Row Mean |          1          2          3
-## ---------+---------------------------------
+## Row Mean |          1          2
+## ---------+----------------------
 ##        2 |   5.726135
 ##          |    0.0000*
 ##          |
-##        3 |   3.715692  -2.102808
-##          |    0.0003*     0.0266
-##          |
-##        4 |   1.717197  -2.186862  -0.809097
-##          |     0.0516     0.0288     0.2092</code></pre>
+##        3 |   3.645069  -2.509239
+##          |    0.0002*    0.0060*</code></pre>
+<pre><code>##   Q28.2c     mean median  N
+## 1      1 1.921569      1 51
+## 2      2 3.031746      3 63
+## 3      3 2.594937      3 79
+## 4     NA 4.000000      4  2</code></pre>
+<p>Pre-didactic students are significantly less likely to agree with the statement “My professors have encouraged the use of personalized medicine” then either pre-clinical or clinical students. Pre-clinical students are significantly MORE LIKELY to agree with the statement than either pre-clinical OR clinical students. Clinical students are signiciantly more likely to agree with the statement than pre-didactic students, but significantly less likely to agree with the statement than pre-clinical students.</p>
+</div>
+</div>
 </div>
 </div>
 <div id="genomic-testing-question-analysis-pooled-q18-25" class="section level2">
@@ -1905,7 +2312,7 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 </tr>
 <tr class="odd">
 <td align="left">Question 28.2</td>
-<td align="right">0.0000002</td>
+<td align="right">0.0000000</td>
 <td align="right">1</td>
 </tr>
 <tr class="even">
@@ -1930,18 +2337,245 @@ infile &lt;- read.csv(tmp,header=TRUE)</code></pre>
 </tr>
 </tbody>
 </table>
-<pre class="r"><code>ddply(infile3, ~Q27, summarize, mean=mean(genomics, na.rm=TRUE), N=length(genomics))</code></pre>
 <pre><code>##   Q27     mean   N
 ## 1   0 22.91176 103
 ## 2   1 19.60674  90
 ## 3  NA 21.50000   2</code></pre>
-<pre class="r"><code>ddply(infile3, ~Q28.2, summarize, mean=mean(genomics, na.rm=TRUE), N=length(genomics))</code></pre>
-<pre><code>##   Q28.2     mean  N
-## 1     1 16.62000 51
-## 2     2 22.50000 63
-## 3     3 23.72581 62
-## 4     4 23.94118 17
-## 5    NA 10.50000  2</code></pre>
+<pre><code>##   Q28.2c     mean  N
+## 1      1 16.62000 51
+## 2      2 22.50000 63
+## 3      3 23.77215 79
+## 4     NA 10.50000  2</code></pre>
+<pre><code>##   Tukey multiple comparisons of means
+##     95% family-wise confidence level
+## 
+## Fit: aov(formula = infile3$genomics ~ as.factor(infile3$Q27))
+## 
+## $`as.factor(infile3$Q27)`
+##          diff       lwr       upr     p adj
+## 1-0 -3.305023 -5.359844 -1.250202 0.0017625</code></pre>
+<pre><code>##   Tukey multiple comparisons of means
+##     95% family-wise confidence level
+## 
+## Fit: aov(formula = infile3$genomics ~ as.factor(infile3$Q28.2c))
+## 
+## $`as.factor(infile3$Q28.2c)`
+##         diff       lwr       upr     p adj
+## 2-1 5.880000  2.871448  8.888552 0.0000214
+## 3-1 7.152152  4.291759 10.012545 0.0000000
+## 3-2 1.272152 -1.413375  3.957679 0.5035073</code></pre>
+<ul>
+<li>Males were significantly more likely to score a higher result on the genomics section (questions 18-25) than were females. (p&lt;0.0018) <strong>Obviously this is not a real result: We will build a linear model to control for male’s apparent tendency to overrate their genetic testing knowledge and ability</strong>.</li>
+<li>Pre-didactic students scored significantly lower on the genomics section when compared to either clinical (P&lt;0.0000001) or pre-clinical (p&lt;0.0000214) students. Pre-clinical and clinical students did not score significantly differently.</li>
+</ul>
+<div id="regression-model-for-genomics-section" class="section level3">
+<h3>Regression model for genomics section</h3>
+<p>We want to build a model using questions 26-30.2 to predict score on the genetics/genomics section of the survey.</p>
+<pre><code>## 
+##   0   1   2 
+##  40 101   8</code></pre>
+<pre><code>## 
+##  0  1  2 
+## 40 81 28</code></pre>
+<pre><code>## 
+##   0   1 
+##  90 104</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = genomics ~ Q26 + Q27.f + Q28.2 + Q29.1.f + Q30.1.f + 
+##     Q30c, data = infile3)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -13.6041  -4.7767  -0.0329   4.5516  19.9206 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)  12.6573     4.7587   2.660 0.008794 ** 
+## Q26          -0.8616     0.8211  -1.049 0.295947    
+## Q27.f1       -3.8000     1.1375  -3.341 0.001089 ** 
+## Q28.2         2.5730     0.7042   3.654 0.000373 ***
+## Q29.1.f1      1.9956     1.4441   1.382 0.169339    
+## Q30.1.f1      4.0539     4.7432   0.855 0.394291    
+## Q30.1.f2      5.7106     4.8064   1.188 0.236937    
+## Q30c1         1.7694     1.4080   1.257 0.211112    
+## Q30c2         4.1241     1.7110   2.410 0.017326 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.454 on 131 degrees of freedom
+##   (55 observations deleted due to missingness)
+## Multiple R-squared:  0.2383, Adjusted R-squared:  0.1918 
+## F-statistic: 5.124 on 8 and 131 DF,  p-value: 1.447e-05</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = genomics ~ Q27.f + Q28.2 + Q29.1.f + Q30.1.f + Q30c, 
+##     data = infile3)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -13.3352  -4.7319  -0.1304   4.8741  20.4780 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)  11.6812     4.6687   2.502 0.013570 *  
+## Q27.f1       -3.6637     1.1305  -3.241 0.001508 ** 
+## Q28.2         2.1678     0.5892   3.680 0.000339 ***
+## Q29.1.f1      1.8630     1.4391   1.295 0.197726    
+## Q30.1.f1      4.0756     4.7450   0.859 0.391937    
+## Q30.1.f2      5.6730     4.8082   1.180 0.240173    
+## Q30c1         1.9072     1.4024   1.360 0.176178    
+## Q30c2         4.3021     1.7032   2.526 0.012723 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.457 on 132 degrees of freedom
+##   (55 observations deleted due to missingness)
+## Multiple R-squared:  0.2319, Adjusted R-squared:  0.1912 
+## F-statistic: 5.694 on 7 and 132 DF,  p-value: 9.11e-06</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = genomics ~ Q27.f + Q28.2 + Q29.1.f + Q30.1.f, data = infile3)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -13.610  -5.073   0.033   3.919  20.642 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)  18.3601     1.8389   9.984  &lt; 2e-16 ***
+## Q27.f1       -2.8972     0.9834  -2.946  0.00365 ** 
+## Q28.2         2.5289     0.5227   4.838  2.8e-06 ***
+## Q29.1.f1      2.4896     1.4313   1.739  0.08368 .  
+## Q30.1.f1     -1.8657     1.4282  -1.306  0.19310    
+## Q30.1.f2     -1.5312     1.5021  -1.019  0.30940    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.635 on 180 degrees of freedom
+##   (9 observations deleted due to missingness)
+## Multiple R-squared:  0.1781, Adjusted R-squared:  0.1553 
+## F-statistic: 7.801 on 5 and 180 DF,  p-value: 1.146e-06</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = genomics ~ Q27.f + Q28.2 + Q29.1.f + Q30c, data = infile3)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -14.0557  -4.8118   0.0467   4.3588  21.6125 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)  15.9631     1.6183   9.864  &lt; 2e-16 ***
+## Q27.f1       -3.4342     1.1173  -3.074  0.00256 ** 
+## Q28.2         2.4244     0.5802   4.178 5.24e-05 ***
+## Q29.1.f1      1.3211     1.4082   0.938  0.34984    
+## Q30c1         1.2586     1.3381   0.941  0.34859    
+## Q30c2         3.8293     1.6752   2.286  0.02381 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.501 on 135 degrees of freedom
+##   (54 observations deleted due to missingness)
+## Multiple R-squared:  0.2234, Adjusted R-squared:  0.1947 
+## F-statistic: 7.769 on 5 and 135 DF,  p-value: 1.884e-06</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = genomics ~ Q27.f + Q28.2 + Q29.1 + Q30.1.f, data = infile3)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -13.610  -5.073   0.033   3.919  20.642 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)  18.3601     1.8389   9.984  &lt; 2e-16 ***
+## Q27.f1       -2.8972     0.9834  -2.946  0.00365 ** 
+## Q28.2         2.5289     0.5227   4.838  2.8e-06 ***
+## Q29.1         2.4896     1.4313   1.739  0.08368 .  
+## Q30.1.f1     -1.8657     1.4282  -1.306  0.19310    
+## Q30.1.f2     -1.5312     1.5021  -1.019  0.30940    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.635 on 180 degrees of freedom
+##   (9 observations deleted due to missingness)
+## Multiple R-squared:  0.1781, Adjusted R-squared:  0.1553 
+## F-statistic: 7.801 on 5 and 180 DF,  p-value: 1.146e-06</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = genomics ~ Q27.f + Q28.2 + Q30c, data = infile3)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -14.652  -4.782   0.206   4.116  21.616 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)   15.887      1.592   9.979  &lt; 2e-16 ***
+## Q27.f1        -3.480      1.104  -3.152  0.00199 ** 
+## Q28.2          2.496      0.574   4.349 2.64e-05 ***
+## Q30c1          1.395      1.310   1.064  0.28911    
+## Q30c2          4.260      1.628   2.617  0.00986 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.478 on 138 degrees of freedom
+##   (52 observations deleted due to missingness)
+## Multiple R-squared:  0.231,  Adjusted R-squared:  0.2087 
+## F-statistic: 10.37 on 4 and 138 DF,  p-value: 2.274e-07</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = genomics ~ Q26 + Q27 + Q28.2 + Q29.1.f + Q30.1c + 
+##     Q30c, data = infile3)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -13.7269  -4.5872   0.1116   4.4043  20.3849 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)  17.7911     1.9967   8.910 3.55e-15 ***
+## Q26          -0.8543     0.8223  -1.039 0.300747    
+## Q27          -3.6110     1.1280  -3.201 0.001715 ** 
+## Q28.2         2.6783     0.6997   3.828 0.000199 ***
+## Q29.1.f1      2.0690     1.4450   1.432 0.154547    
+## Q30.1c1      -1.3796     1.2604  -1.095 0.275683    
+## Q30c1         1.7528     1.4102   1.243 0.216084    
+## Q30c2         3.9218     1.7051   2.300 0.023017 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.464 on 132 degrees of freedom
+##   (55 observations deleted due to missingness)
+## Multiple R-squared:  0.2301, Adjusted R-squared:  0.1893 
+## F-statistic: 5.637 on 7 and 132 DF,  p-value: 1.044e-05</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = genomics ~ Q27 + Q28.2 + Q29.1.f + Q30.1c + Q30c, 
+##     data = infile3)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -13.4597  -4.6181   0.0254   4.8539  20.9346 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)  16.7896     1.7491   9.599  &lt; 2e-16 ***
+## Q27          -3.4770     1.1210  -3.102 0.002350 ** 
+## Q28.2         2.2758     0.5829   3.905 0.000149 ***
+## Q29.1.f1      1.9370     1.4398   1.345 0.180811    
+## Q30.1c1      -1.3226     1.2596  -1.050 0.295589    
+## Q30c1         1.8895     1.4044   1.345 0.180791    
+## Q30c2         4.0997     1.6970   2.416 0.017059 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 6.466 on 133 degrees of freedom
+##   (55 observations deleted due to missingness)
+## Multiple R-squared:  0.2238, Adjusted R-squared:  0.1888 
+## F-statistic: 6.393 on 6 and 133 DF,  p-value: 6.171e-06</code></pre>
+</div>
 </div>
 
 

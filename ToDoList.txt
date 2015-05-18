@@ -1,15 +1,15 @@
 To-Do list:
 
-1. Re-calculate Likert scores for EBPAS excluding education questions
+XX 1. Re-calculate Likert scores for EBPAS excluding education questions
     i. EBPAS includes openness and divergence questions only (not education)
     ii. Divergence answers should be reversed (check that this was done)
     iii. I didn’t think of this in the meeting, but I’ll check if any 3 question subsets of the education questions have a higher C-alpha. It might be that one question is throwing things off. Because there are only four questions in total, I think it’s probably ok to do this statistically.
 
-2. Collapsed T-tests for EBPAS ~ Questions 13-25 (looking at entire cohort)
+XX 2. Collapsed T-tests for EBPAS ~ Questions 13-25 (looking at entire cohort)
 
-3. Collapsed T-tests for questions 3, 6, 9, 11 alone (Education) ~ Questions 13-25. 
+XX 3. Collapsed T-tests for questions 3, 6, 9, 11 alone (Education) ~ Questions 13-25. 
 
-4. Compute Cronbach's Alpha for "Comfort in genomic knowledge..." (Q18-21) and "Comfort in genomic ability..." (Q22-25) sections
+XX 4. Compute Cronbach's Alpha for "Comfort in genomic knowledge..." (Q18-21) and "Comfort in genomic ability..." (Q22-25) sections
     i. If these are a > 0.7, we can do additional analysis on the section sums as a dependent variable. 
     ii. We could also consider combining these eight questions as one section called something like “Genomic Testing Comfort and Knowledge/Ability.” I’ll do that just in case.
 
@@ -29,7 +29,7 @@ To-Do list:
     d. Genomic ability comfort: same as EBPAS excluding vi and vii
     e. Genomic ability/knowledge grouping (possibly): Same as EBPAS excluding vi and vii
 
-6. Analysis by multiple linear regression (multiple simultaneous independent variables). Although we treated dependent variables as categorical in #5, I think treating them as continuous is acceptable. This was done in the paper. Basically, I’ll try to build models predicting EBPAS, individual educational questions, genomic testing knowledge, and genomic testing ability with the different covariates. I think exactly what i end up doing will depend on the results of #5.
+6. Analysis by multiple linear regression (multiple simultaneous independent variables). Although we treated dependent variables as categorical in #5, I think treating them as continuous is acceptable. This was done in the paper. Basically, I’ll try to build models predicting EBPAS, individual educational questions, genomic testing knowledge, and genomic testing ability with the different covariates. I think exactly what I end up doing will depend on the results of #5.
 
 We’re also interested in building a model for question #15 after controlling for medical school year. Also some type of analysis for Q14 vs. Q15. 
 

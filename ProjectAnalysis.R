@@ -1,4 +1,7 @@
 ## Attitudes Toward Personalized Genomics Testing Data Analysis
+
+#### This is deprecated; I started working directly in the markdown file.
+
 library(plyr)
 library(psych)
 rm(list=ls())

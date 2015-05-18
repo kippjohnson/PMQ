@@ -5,16 +5,22 @@ date: "May 15, 2015"
 output: html_document
 ---
 
-Note: This analysis is conducted in R using R Markdown for report generation. The raw data as well as the source code for every table, figure, and calculation is accessible at https://www.github.com/kippjohnson/PMQ/
+## Introduction
 
-Begin by calling packages which will be used later in the report:
+This analysis is conducted in R using R Markdown with Knitr for report generation. The raw data as well as the source code for every table, figure, and calculation is accessible at https://www.github.com/kippjohnson/PMQ/ 
+
+Much of the actual analysis code is omitted from being embedded in the printout of this report because it's tedious to look at along with the results. However, it is completely available in the markdown file in the Github repository (ProjectReport.Rmd).
+
+NOTE: I got tired of typing "after correction for multiple testing" report. All P-Values which are reported as significant in this text have undergone correction for multiple testing using either the Bonferroni, Tukey honest significant differences method, or Benjami-Hochberg method. I usually use the Bonferroni method (0.05/n tests); in one section it makes more sense to use a more elaborate method (B-H) or Tukey, and it is stated when it is used. Tukey HSD is used following significant ANOVA results.
+
+If you are trying to replicate this report, ensure the following R packages are installed and loaded:
 ```{r Call required libraries, error=FALSE,warning=FALSE,autodep=FALSE,collapse=TRUE,message=FALSE}
-library(knitr)
+library(knitr) # For report generation, not strictly necessary to run code
 library(psych)
 library(dunn.test)
 ```
 
-Reading in the data from the Github Repository (/kippjohnson/PMQ):
+R code for reading in the data from the Github Repository (/kippjohnson/PMQ):
 ```{r Read in data from Github, results='hide'}
 rm(list=ls())
 tmp <- tempfile()
@@ -22,7 +28,7 @@ download.file("https://raw.githubusercontent.com/kippjohnson/PMQ/master/SurveyRe
 infile <- read.csv(tmp,header=TRUE)
 ```
 
-### Demographics
+## Survey Demographics Table
 ```{r Demographics Table, echo=FALSE}
 nMales = table(infile$Q27)[[1]]
 nFemales = table(infile$Q27)[[2]]
@@ -48,19 +54,18 @@ kable(demog, digits=2,padding=0)
 
 
 ### EBPAS Statistics
-The first step is to compute EBPAS total score, along with its subsets for scores of openness, and divergence. Education is not included in the EBPAS. Questions 1-12 excluding 3, 6, 9, and 11 define the EBPAS scale on the survey. 3, 6, 9, and 11 are the education questions. There are a number of people who did not completely fill out the first 12 questions of the survey, and for this analysis they will be dropped.
+The first step is to compute EBPAS total score, along with its subsets for scores of openness, and divergence. Education is not included in the EBPAS. Questions 1-12 excluding 3, 6, 9, and 11 define the EBPAS scale on the survey. 3, 6, 9, and 11 are the education questions. There are a number of people who did not completely fill out the first 12 questions of the survey, and for the analysis they will be dropped because we have a large enough number of respondents without them.
 
-Questions 2, 4, 5, and 8 are 'divergence' questions, where the questions have answers which have been formulated to be the inverse of the answering scale. They need to be reversed for our analysis. 
+Questions 2, 4, 5, and 8 are 'divergence' questions, where the questions have answers which have been formulated to be the inverse of the answering scale. They have been reversed in our analysis.
 
-```{r Drop observations that are incomplete in EBPAS, echo=FALSE }
+```{r Drop observations that are incomplete in EBPAS}
 infile2 <- mutate(infile, total1to12 = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
 infile3 <- infile2[-which(is.na(infile2$total1to12)),] #drop incompletes
 ```
 
 Number of people who did not completely fill out the first 12 questions on the survey: **`r length(which(is.na(infile2$total1to12)))`**
 
-Questions:
-- Will we drop all of these  **`r length(which(is.na(infile2$total1to12)))`** individuals from the rest of the study? 
+Questions here:  Do you agree with my decision to drop  **`r length(which(is.na(infile2$total1to12)))`** individuals from the rest of the study? I think it was the best way to proceed, because we have a large number of responses without them and it makes everything harder and less reliable if we choose to proceed with a large amount of missing data.
 
 ```{r Making EBPAS openness divergence education columns, echo=FALSE}
 infile3 <- mutate(infile3, EBPAS = Q1+Q2+Q4+Q5+Q7+Q8+Q10+Q12)
@@ -69,10 +74,10 @@ infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
 infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
 ```
 
-#### Cronbach's Alpha Calculations
+#### __Initial__ Cronbach's Alpha Calculations
 For Cronbach's alpha, we use the alpha() function from the psych package in R. The EBPAS cronbach's alpha is taken from the literature {0.78} (Overby et al., J Pers. Med. 2014), as was done in the paper from which we are modeling this.
 
-```{r Define Sum function, echo=FALSE}
+```{r Define Summation function, echo=FALSE}
 sums <- function(somevector){
   n <- length(somevector)
   xbar <- mean(somevector)
@@ -87,6 +92,8 @@ sums <- function(somevector){
 
 
 ```{r Getting Initialized, echo=FALSE, warning=FALSE}
+### Compute statistics for later table
+
 EBPASstats <- sums(infile3$EBPAS)
 opennessstats <- sums(infile3$openness)
 divergencestats <- sums(infile3$divergence)
@@ -131,18 +138,52 @@ rownames(subsettable) <- c("Questions 3, 9, 9","Questions 3, 9, 11", "Questions 
 kable(subsettable)
 ```
 
-##  Analysis Plan
+As you can see, none of these are above 0.70, although the grouping of questions 3, 6, and 11 is close. Apparently question number 9 elicited different responses from the other three educational questions. We we do later find a different association for number 9 with our covariates than we do for questions 3, 6, and 11. 
+
+### Computing Cronbach's alpha for questions 18-21, 22-25, and 18-25 combined.
+
+Questions 18-21 ask the subject "How comfortable are you in your knowledge about [various genomic testing concepts]." Questions 22-25 ask the subject "How comfortable are you in your ability to [apply various genomic testing concepts in a clinical setting]". We can also combine all 8 questions together as a general genomic familiarity category. To see if these sections assessed the same central ability, we can compute Cronbach's alpha for each of them:
+
+```{r Calculation of Genomics Cronbach Alphas, echo=FALSE}
+
+knowledge_alpha <- alpha(infile3[,c("Q18","Q19","Q20","Q21")])
+ability_alpha <-   alpha(infile3[,c("Q22","Q23","Q24","Q25")])
+knowledge_ability_alpha <-   alpha(infile3[,c("Q18","Q19","Q20","Q21","Q22","Q23","Q24","Q25")])
+
+outka <- data.frame(knowledge_alpha$total[[1]], ability_alpha$total[[1]], knowledge_ability_alpha$total[[1]])
+colnames(outka) <- c("Questions 18-21 Alpha", "Questions 22-25 Alpha", "Questions 18-25 (Combined) Alpha")
+kable(outka)
+```
+
+As you can see, the Cronbach's alpha for these sections are extremely high.
+
+## Data Analysis & Significance Tests
 
 #### Step 1: Frequencies
 
-*Question Response Frequencies*: Tables of each question's (13-25) response frequency. These questions include:
+*Question Response Frequencies*: Tables of each question's (1-25) response frequency. These questions are categorized as:
 
+* EBPAS & education questions (1-12)
 * Attitudes toward DTC (13-15)
 * Comfort using technology (16, 17)
 * Knowledge of genomic testing concepts (18-21)
 * Ability to understand genomic testing concepts (22-25)
 
+The coding for the question responses is given in the file "DataCoding.txt" in the Github repository. Most of the time it's obvious. 
+
 ```{r, echo=FALSE}
+kable(data.frame(table(infile$Q1)),col.names=c("Question 1", "Frequency"),align="l")
+kable(data.frame(table(infile$Q2)),col.names=c("Question 2", "Frequency"),align="l")
+kable(data.frame(table(infile$Q3)),col.names=c("Question 3", "Frequency"),align="l")
+kable(data.frame(table(infile$Q4)),col.names=c("Question 4", "Frequency"),align="l")
+kable(data.frame(table(infile$Q5)),col.names=c("Question 5", "Frequency"),align="l")
+kable(data.frame(table(infile$Q6)),col.names=c("Question 6", "Frequency"),align="l")
+kable(data.frame(table(infile$Q7)),col.names=c("Question 7", "Frequency"),align="l")
+kable(data.frame(table(infile$Q8)),col.names=c("Question 8", "Frequency"),align="l")
+kable(data.frame(table(infile$Q9)),col.names=c("Question 9", "Frequency"),align="l")
+kable(data.frame(table(infile$Q10)),col.names=c("Question 10", "Frequency"),align="l")
+kable(data.frame(table(infile$Q11)),col.names=c("Question 11", "Frequency"),align="l")
+kable(data.frame(table(infile$Q12)),col.names=c("Question 12", "Frequency"),align="l")
 
 kable(data.frame(table(infile$Q13)),col.names=c("Question 13", "Frequency"),align="l") # Have heard of DTC: 50 no, 101 yes
 kable(data.frame(table(infile$Q14)),col.names=c("Question 14", "Frequency"),align="l") # Would use DTC: 73 would not use, 121 would use, 9 did use
@@ -161,11 +202,11 @@ kable(data.frame(table(infile$Q24)),col.names=c("Question 24", "Frequency"),alig
 kable(data.frame(table(infile$Q25)),col.names=c("Question 25", "Frequency"),align="l") # Ability to make treatment recommendations based upon genomic test results
 ```
 
-### Step 2: T-Tests
+### Step 2: EBPAS Collapsed T-Tests
 
 First, answers for questions 13-25 were tested for an association with EBPAS Score (Questions 1-12 excluding the education questions) using ANOVA followed by Tukey Honest Signficant Differences. Second, the answers were collapsed into binary categories and T-tests for association with EBPAS score were performed.
 
-The R output for each ANOVA, Tukey-HSD, and Collapsed T-test is shown below. After the end of the output there is a table summarizing the results in a fashion analagous to Table 6 in Overby et al.
+The R output for each ANOVA and Collapsed T-test is shown below. After the end of the output there is a table summarizing the results in a fashion analagous to Table 6 in Overby et al.
 
 The format for each ANOVA is EBPAS ~ Question Answer Choices. After that, if the ANOVA is significant, a Tukey HSD test is computed. The TukeyHSD test shows which answer choices in the ANOVA results are actually associated with significantly different EBPAS scores.
 
@@ -200,7 +241,6 @@ t.test(infile3$EBPAS ~ infile3$Q14c) # Significant
 CT14 <- t.test(infile3$EBPAS ~ infile3$Q14c) # Significant)
 
 s14 <- ddply(infile3, ~infile3$Q14c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
-
 ```
 
 ##### Question 15
@@ -445,7 +485,6 @@ table(infile3$Q24c)
 t.test(infile3$EBPAS ~ infile3$Q24c) # Significant)
 CT24 <- t.test(infile3$EBPAS ~ infile3$Q24c) # Significant)
 s24 <- ddply(infile3, ~infile3$Q24c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
-
 ```
 
 ##### Question 25
@@ -565,11 +604,22 @@ kable(out, digits=3)
         
 ```
 
+```{r, echo=FALSE}
+ddply(infile3, ~Q19c, summarize, n=length(EBPAS), mean=mean(EBPAS))
+ddply(infile3, ~Q22c, summarize, n=length(EBPAS), mean=mean(EBPAS))
+ddply(infile3, ~Q25c, summarize, n=length(EBPAS), mean=mean(EBPAS))
+```
+After correction for multiple testing, EBPAS is significantly associated with questions 19, 22, and 25.
+
+* On question 19, those who answered "not at all/not very/neither comfortable not uncomfortable" had a significantly lower EBPAS score than those who answered "comfortable or very comfortable" (P=<0.0001)
+* On question 22, those who answered "not at all/not very/neither comfortable not uncomfortable" had a significantly lower EBPAS score than those who answered "comfortable or very comfortable" (P=<0.0004)
+* On question 23, those who answered "not at all/not very/neither comfortable not uncomfortable" had a significantly lower EBPAS score than those who answered "comfortable or very comfortable" (P=<0.0004)
+
 ### Statistical Tests (ANOVA and Collapsed T-tests) for four education questions
 
 In the previous section, we performed ANOVA and collapsed T tests for the 8 EBPAS questions on the predictor questions 13-25. For the education questions 3, 6, 9, and 11, we cannot combine them into one category because Cronbach's alpha is <0.7 for them. However, we can analyze the questions individually, as is done here:
 
-##### Tests for association with Education question 3
+##### T-Tests for association with Education question 3
 ```{r Q3 on Education, echo=FALSE, results='hold', fig.show='hide'}
 
 ### Q3
@@ -624,9 +674,20 @@ rownames(out3) <- c("Question 13","Question 14","Question 15","Question 16","Que
 
 kable(out3, digits=6)
 
+ddply(infile3, ~Q15c, summarize, n=length(Q3), mean=mean(Q3))
+ddply(infile3, ~Q18c, summarize, n=length(Q3), mean=mean(Q3))
+ddply(infile3, ~Q19c, summarize, n=length(Q3), mean=mean(Q3))
+ddply(infile3, ~Q23c, summarize, n=length(Q3), mean=mean(Q3))
+ddply(infile3, ~Q24c, summarize, n=length(Q3), mean=mean(Q3))
 ```
 
-##### Tests for association with Education question 6
+* Those who answered question 15 ("I know enough about genomic to undestand DTC") as either strongly/ siagree/disagree/uncertain had a significantly lower agreement with the statement "My medical education has adequately prepared me to practice personalized medicine" than those who answered the question as agree or strongly agree (p=0.000214)
+* Those who answered question 18 ("Basic genomic testing concepts and terminology?") as either not at all comfortable/not very comfortable/neither comfortable nor uncomfortable had a significantly lower agreement with the statement "My medical education has adequately prepared me to practice personalized medicine" than those who answered the question" than those who answered the question as comfortable or very comfortable
+* Those who answered question 19 ("Pharmacogenomics?") as either not at all comfortable/not very comfortable/neither comfortable nor uncomfortable had a significantly lower agreement with the statement "My medical education has adequately prepared me to practice personalized medicine" than those who answered the question" than those who answered the question as comfortable or very comfortable.
+* Those who answered question 23 ("Understand genomic test results?") as either not at all comfortable/not very comfortable/neither comfortable nor uncomfortable had a significantly lower agreement with the statement "My medical education has adequately prepared me to practice personalized medicine" than those who answered the question" than those who answered the question as comfortable or very comfortable.
+* Those who answered question 24 ("Explain genomic test results") as either not at all comfortable/not very comfortable/neither comfortable nor uncomfortable had a significantly lower agreement with the statement "My medical education has adequately prepared me to practice personalized medicine" than those who answered the question" than those who answered the question as comfortable or very comfortable.
+
+##### T-Tests for association with Education question 6
 ```{r Q6 on Education, echo=FALSE, results='hold', fig.show='hide'}
 ### Q6
 
@@ -678,10 +739,26 @@ out6 <- t(data.frame(c(ed_6on13$p.value, ed_6on13_adj),
 colnames(out6) <- c("P Value", "Significant (1=Yes, 0=No)")
 rownames(out6) <- c("Question 13","Question 14","Question 15","Question 16","Question 17","Question 18","Question 19","Question 20","Question 21","Question 22","Question 23","Question 24","Question 25")
 
+ddply(infile3, ~Q15c, summarize, n=length(Q3), mean=mean(Q6))
+ddply(infile3, ~Q18c, summarize, n=length(Q3), mean=mean(Q6))
+ddply(infile3, ~Q19c, summarize, n=length(Q3), mean=mean(Q6))
+ddply(infile3, ~Q20c, summarize, n=length(Q3), mean=mean(Q6))
+ddply(infile3, ~Q21c, summarize, n=length(Q3), mean=mean(Q6))
+ddply(infile3, ~Q23c, summarize, n=length(Q3), mean=mean(Q6))
+ddply(infile3, ~Q24c, summarize, n=length(Q3), mean=mean(Q6))
+
 kable(out6,digits=6)
 ```
 
-##### Tests for association with Education question 9
+* Those who answered question number 15 ("I know enought about genetics and genomics to understand DTC") as either strongly disagree, disagree, or uncertain had a significantly lower agreement with the statement "I know whom to ask questions regarding genomic testing questions" than those who answered the question as agree or strongly agree.
+* Those who answered question number 18 ("Basic genomic testing concepts and terminology") as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement "I know whom to ask questions regarding genomic testing questions" than those who answered the question as comfortable or very comfortable.
+* Those who answered question number 19 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement "I know whom to ask questions regarding genomic testing questions" than those who answered the question as comfortable or very comfortable.
+* Those who answered question number 20 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement "I know whom to ask questions regarding genomic testing questions" than those who answered the question as comfortable or very comfortable.
+* Those who answered question number 21 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement "I know whom to ask questions regarding genomic testing questions" than those who answered the question as comfortable or very comfortable.
+* Those who answered question number 23 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement "I know whom to ask questions regarding genomic testing questions" than those who answered the question as comfortable or very comfortable.
+* Those who answered question number 24 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement "I know whom to ask questions regarding genomic testing questions" than those who answered the question as comfortable or very comfortable.
+
+##### T-Tests for association with Education question 9
 ```{r Q9 on Education, echo=FALSE, results='hold', fig.show='hide'}
 ### Q9
 
@@ -736,7 +813,9 @@ rownames(out9) <- c("Question 13","Question 14","Question 15","Question 16","Que
 kable(out9,digits=6)
 ```
 
-##### Tests for association with Education question 11
+There were no significant associations using collapsed T-tests for question nine. 
+
+##### T-Tests for association with Education question 11
 ```{r Q11 on Education, echo=FALSE, results='hold', fig.show='hide'}
 ### Q11
 
@@ -791,154 +870,164 @@ rownames(out11) <- c("Question 13","Question 14","Question 15","Question 16","Qu
 kable(out11,digits=6)
 ```
 
-### Computing Cronbach's alpha for questions 18-21, 22-25, and 18-25 combined.
+* Those who answered question number 15 as either strongly disagree, disagree, or uncertain had a significantly lower agreement with the statement "My professors have encouraged the use of personalized medicine" than those who answered the question as agree or strongly agree.
+* Those who answered question number 19 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement "My professors have encouraged the use of personalized medicine" than those who answered the question as comfortable or very comfortable.
+* Those who answered question number 25 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement "My professors have encouraged the use of personalized medicine" than those who answered the question as comfortable or very comfortable.
 
-Questions 18-21 ask the subject "How comfortable are you in your knowledge about [...]" various genomic testing concepts. Questions 22-25 ask the subject "How comfortable are you in your ability to [...]" apply various genomic testing concepts in a clinical setting. We can also combine all 8 questions together as a general genomic familiarity category. To see if these sections assessed the same central ability, we can compute Cronbach's alpha for each of them:
+## Covariate Analysis 
+### Further EBPAS Analyses (against covariates using ANOVA, Questions 26-31.2)
 
-```{r Calculation of Genomics Cronbach Alphas, echo=FALSE}
+Because EBPAS score is a continuous vector of integers and is approximately normally distributed, the appropriate test to use here is ANOVA. We are looking now for associations between EBPAS and the covariates.
 
-knowledge_alpha <- alpha(infile3[,c("Q18","Q19","Q20","Q21")])
-ability_alpha <-   alpha(infile3[,c("Q22","Q23","Q24","Q25")])
-knowledge_ability_alpha <-   alpha(infile3[,c("Q18","Q19","Q20","Q21","Q22","Q23","Q24","Q25")])
+##### Covariate Grouping
+We need to create a new grouping from Question 28.2 (Year of medical school). We are just merging the M3 and M4 students into one "clinical" grouping, while coding M1s as "pre-didactic" and M2s as "pre-clinical" as was done in Caroline's Poster. The new vector we create is called Q28.2c ("c" for collapsed).
 
-outka <- data.frame(knowledge_alpha$total[[1]], ability_alpha$total[[1]], knowledge_ability_alpha$total[[1]])
-colnames(outka) <- c("Questions 18-21 Alpha", "Questions 22-25 Alpha", "Questions 18-25 (Combined) Alpha")
-kable(outka)
+```{r Covariate Grouping}
+infile3$Q28.2c <- infile3$Q28.2
+infile3$Q28.2c[infile3$Q28.2c==4] <- 3
+clinical_grouping_table <- table(infile3$Q28.2c) 
 ```
 
-As we can see, the Cronbach's alpha for these three sections are extremely high. We should consider further how we want to analyze these questions. As of now, we are testing the sum of the two categories pooled together for association with the covariates. 
-
-## Further EBPAS Analyses
-
-Because EBPAS score is a continuous vector of integers and is approximately normally distributed, the appropriate test to use here is ANOVA. 
+In the study, there are `r clinical_grouping_table[[1]]` pre-didactic students, `r clinical_grouping_table[[2]]` pre-clinical students, and `r clinical_grouping_table[[3]]` clinical students.
 
 #### EBPAS ANOVAs
-```{r EBPAS ANOVAs on Covariates, echo=FALSE, fig.show='hide'}
+
+```{r EBPAS ANOVAs on q26, echo=FALSE, fig.show='hide'}
 
 # EBPAS ~ Q26
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q26)))
-TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q26)))
 boxplot(EBPAS ~ Q26, data=infile3)
+```
+EBPAS not significantly associated wtih question 26 on ANOVA.
 
+```{r EBPAS ANOVAs on q27, echo=FALSE}
 # EBPAS ~ Q27
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q27)))
-TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q27)))
-boxplot(EBPAS ~ Q27, data=infile3)
+```
+EBPAS not significantly associated with question 27 on ANOVA.
 
-# EBPAS ~ Q28.2 ("Year of Medical School")
-summary(aov(infile3$EBPAS ~ as.factor(infile3$Q28.2)))
-TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q28.2)))
-boxplot(EBPAS ~ Q28.2, data=infile3)
+```{r EBPAS ANOVAs on q28.2c,echo=FALSE}
+# EBPAS ~ Q28.2c (clinical grouping)
+summary(aov(infile3$EBPAS ~ as.factor(infile3$Q28.2c)))
+#boxplot(EBPAS ~ Q28.2c, data=infile3)
+```
+EBPAS not significantly associated wtih question 28.2c on ANOVA.
 
+```{r EBPAS ANOVAs on q29.1,echo=FALSE}
 # EBPAS ~ Q29.1 ("Are you in a dual degre program?")
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q29.1)))
-TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q29.1)))
-boxplot(EBPAS ~ Q29.1, data=infile3)
+#boxplot(EBPAS ~ Q29.1, data=infile3)
+```
+EBPAS not significantly associated wtih question 29.1 on ANOVA.
 
+```{r EBPAS ANOVAs on q29.2,echo=FALSE}
 # EBPAS ~ Q29.2 ("If yes, which dual degree program")
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q29.2)))
-TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q29.2)))
-boxplot(EBPAS ~ Q29.2, data=infile3)
+#boxplot(EBPAS ~ Q29.2, data=infile3)
+```
+EBPAS not significantly associated wtih question 29.2 on ANOVA.
 
+```{r EBPAS ANOVAs on q30.1,echo=FALSE}
 # EBPAS ~ Q30.1
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q30.1)))
-TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q30.1)))
-boxplot(EBPAS ~ Q30.1, data=infile3)
+#boxplot(EBPAS ~ Q30.1, data=infile3)
+```
+EBPAS not significantly associated wtih question 30.1 on ANOVA.
 
+```{r EBPAS ANOVAs on q230.2,echo=FALSE}
 # EBPAS ~ Q30.2
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q30.2)))
-TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q30.2)))
-boxplot(EBPAS ~ Q30.2, data=infile3)
+#boxplot(EBPAS ~ Q30.2, data=infile3)
 ```
+EBPAS not significantly associated wtih question 30.2 on ANOVA.
 
-## Education Question Covariate Analysis
+### Education Question Covariate Analysis
 
 I elected to use the Kruskal-Wallis test on the Likert Data instead of ANOVA. Chi-Square assumptions are usually not met without further grouping. KW test is a non-parametric version of one-way ANOVA appropriate here because of ordinal data. The results are summarized in the table below. Correction was done for multiple testing.
 
-##### Question 3
+##### Question 3 
+See table below, output omitted for brevity
 ```{r Education (No. 3) on Covariates, echo=FALSE, results='hide',fig.show='hide'}
 
 # Q3 ~ Q26
 summary(aov(infile3$Q3 ~ as.factor(infile3$Q26)))
 kwq3on26 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q26))
 #TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q26)))
-boxplot(EBPAS ~ Q3, data=infile3)
 
 # Q3 ~ Q27
 summary(aov(infile3$Q3 ~ as.factor(infile3$Q27)))
 kwq3on27 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q27))
 #TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q27)))
-boxplot(EBPAS ~ Q3, data=infile3)
 
 # Q3 ~ Q28.2 ("Year of Medical School")
-summary(aov(infile3$Q3 ~ as.factor(infile3$Q28.2)))
-kwq3on28.2 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q28.2))
+# summary(aov(infile3$Q3 ~ as.factor(infile3$Q28.2)))
+# kwq3on28.2 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q28.2))
 #TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q28.2)))
-boxplot(EBPAS ~ Q3, data=infile3)
+
+# Q3 ~ Q28.2c (clinical grouping)
+summary(aov(infile3$Q3 ~ as.factor(infile3$Q28.2c)))
+kwq3on28.2 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q28.2c))
+#TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q28.2)))
 
 # Q3 ~ Q29.1 ("Are you in a dual degre program?")
 summary(aov(infile3$Q3 ~ as.factor(infile3$Q29.1)))
 kwq3on29.1 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q29.1))
 #TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q29.1)))
-boxplot(EBPAS ~ Q3, data=infile3)
 
 # Q3 ~ Q29.2 ("If yes, which dual degree program")
 summary(aov(infile3$Q3 ~ as.factor(infile3$Q29.2)))
 kwq3on29.2 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q29.2))
 #TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q29.2)))
-boxplot(EBPAS ~ Q3, data=infile3)
 
 # Q3 ~ Q30.1
 summary(aov(infile3$Q3 ~ as.factor(infile3$Q30.1)))
 kwq3on30.1 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q30.1))
 #TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q30.1)))
-boxplot(EBPAS ~ Q3, data=infile3)
 
 # Q3 ~ Q30.2
 summary(aov(infile3$Q3 ~ as.factor(infile3$Q30.2)))
 kwq3on30.2 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q30.2))
 #TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q30.2)))
-boxplot(EBPAS ~ Q3, data=infile3)
 ```
 
 ##### Question 6
+See table below, output omitted for brevity
 ```{r Education (No. 6) on Covariates, echo=FALSE, results='hide',fig.show='hide'}
 
 # Q6 ~ Q26
 summary(aov(infile3$Q6 ~ as.factor(infile3$Q26)))
 kwq6on26 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q26))
 #TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q26)))
-boxplot(EBPAS ~ Q6, data=infile3)
 
 # Q6 ~ Q27
 summary(aov(infile3$Q6 ~ as.factor(infile3$Q27)))
 kwq6on27 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q27))
 #TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q27)))
-boxplot(EBPAS ~ Q6, data=infile3)
 
 # Q6 ~ Q28.2 ("Year of Medical School")
-summary(aov(infile3$Q6 ~ as.factor(infile3$Q28.2)))
-kwq6on28.2 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q28.2))
+# summary(aov(infile3$Q6 ~ as.factor(infile3$Q28.2)))
+# kwq6on28.2 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q28.2))
 #TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q28.2)))
-boxplot(EBPAS ~ Q6, data=infile3)
+
+# Q6 ~ Q28.2c (clinical grouping)
+summary(aov(infile3$Q6 ~ as.factor(infile3$Q28.2c)))
+kwq6on28.2 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q28.2c))
+#TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q28.2)))
 
 # Q6 ~ Q29.1 ("Are you in a dual degre program?")
 summary(aov(infile3$Q6 ~ as.factor(infile3$Q29.1)))
 kwq6on29.1 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q29.1))
 #TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q29.1)))
-boxplot(EBPAS ~ Q6, data=infile3)
 
 # Q6 ~ Q29.2 ("If yes, which dual degree program")
 summary(aov(infile3$Q6 ~ as.factor(infile3$Q29.2)))
 kwq6on29.2 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q29.2))
 #TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q29.2)))
-boxplot(EBPAS ~ Q6, data=infile3)
 
 # Q6 ~ Q30.1
 summary(aov(infile3$Q6 ~ as.factor(infile3$Q30.1)))
 kwq6on30.1 <- kruskal.test(infile3$Q6 ~ as.factor(infile3$Q30.1))
 #TukeyHSD(aov(infile3$Q6 ~ as.factor(infile3$Q30.1)))
-boxplot(EBPAS ~ Q6, data=infile3)
 
 # Q6 ~ Q30.2
 summary(aov(infile3$Q6 ~ as.factor(infile3$Q30.2)))
@@ -948,95 +1037,93 @@ boxplot(EBPAS ~ Q6, data=infile3)
 ```
 
 ##### Question 9
+See table below, output omitted for brevity
 ```{r Education (No. 9) on Covariates, echo=FALSE, results='hide',fig.show='hide'}
 
 # Q9 ~ Q26
 summary(aov(infile3$Q9 ~ as.factor(infile3$Q26)))
 kwq9on26 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q26))
 #TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q26)))
-boxplot(EBPAS ~ Q9, data=infile3)
 
 # Q9 ~ Q27
 summary(aov(infile3$Q9 ~ as.factor(infile3$Q27)))
 kwq9on27 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q27))
 #TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q27)))
-boxplot(EBPAS ~ Q9, data=infile3)
 
 # Q9 ~ Q28.2 ("Year of Medical School")
-summary(aov(infile3$Q9 ~ as.factor(infile3$Q28.2)))
-kwq9on28.2 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q28.2))
+# summary(aov(infile3$Q9 ~ as.factor(infile3$Q28.2)))
+# kwq9on28.2 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q28.2))
 #TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q28.2)))
-boxplot(EBPAS ~ Q9, data=infile3)
+
+# Q9 ~ Q28.2c (clinical grouping)
+summary(aov(infile3$Q9 ~ as.factor(infile3$Q28.2c)))
+kwq9on28.2 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q28.2c))
+#TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q28.2)))
 
 # Q9 ~ Q29.1 ("Are you in a dual degre program?")
 summary(aov(infile3$Q9 ~ as.factor(infile3$Q29.1)))
 kwq9on29.1 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q29.1))
 #TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q29.1)))
-boxplot(EBPAS ~ Q9, data=infile3)
 
 # Q9 ~ Q29.2 ("If yes, which dual degree program")
 summary(aov(infile3$Q9 ~ as.factor(infile3$Q29.2)))
 kwq9on29.2 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q29.2))
 #TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q29.2)))
-boxplot(EBPAS ~ Q9, data=infile3)
 
 # Q9 ~ Q30.1
 summary(aov(infile3$Q9 ~ as.factor(infile3$Q30.1)))
 kwq9on30.1 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q30.1))
 #TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q30.1)))
-boxplot(EBPAS ~ Q9, data=infile3)
 
 # Q9 ~ Q30.2
 summary(aov(infile3$Q9 ~ as.factor(infile3$Q30.2)))
 kwq9on30.2 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q30.2))
 #TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q30.2)))
-boxplot(EBPAS ~ Q9, data=infile3)
 ```
 
 ##### Question 11
+See table below, output omitted for brevity
 ```{r Education (No. 11) on Covariates, echo=FALSE, results='hide',fig.show='hide'}
 
 # Q11 ~ Q26 (Age Range)
 summary(aov(infile3$Q11 ~ as.factor(infile3$Q26)))
 kwq11on26 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q26))
 #TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q26)))
-boxplot(EBPAS ~ Q11, data=infile3)
 
 # Q11 ~ Q27 (Gender)
 summary(aov(infile3$Q11 ~ as.factor(infile3$Q27)))
 kwq11on27 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q27))
 #TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q27)))
-boxplot(EBPAS ~ Q11, data=infile3)
 
 # Q11 ~ Q28.2 ("Year of Medical School")
-summary(aov(infile3$Q11 ~ as.factor(infile3$Q28.2)))
-kwq11on28.2 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q28.2))
+# summary(aov(infile3$Q11 ~ as.factor(infile3$Q28.2)))
+# kwq11on28.2 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q28.2))
 #TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q28.2)))
-boxplot(EBPAS ~ Q11, data=infile3)
+
+# Q11 ~ Q28.2c (clinical grouping)
+summary(aov(infile3$Q11 ~ as.factor(infile3$Q28.2c)))
+kwq11on28.2 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q28.2c))
+#TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q28.2)))
 
 # Q11 ~ Q29.1 ("Are you in a dual degre program?")
 summary(aov(infile3$Q11 ~ as.factor(infile3$Q29.1)))
 kwq11on29.1 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q29.1))
 #TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q29.1)))
-boxplot(EBPAS ~ Q11, data=infile3)
 
 # Q11 ~ Q29.2 ("If yes, which dual degree program")
 summary(aov(infile3$Q11 ~ as.factor(infile3$Q29.2)))
 kwq11on29.2 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q29.2))
 #TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q29.2)))
-boxplot(EBPAS ~ Q11, data=infile3)
 
 # Q11 ~ Q30.1
 summary(aov(infile3$Q11 ~ as.factor(infile3$Q30.1)))
 kwq11on30.1 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q30.1))
 #TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q30.1)))
-boxplot(EBPAS ~ Q11, data=infile3)
 
 # Q11 ~ Q30.2
 summary(aov(infile3$Q11 ~ as.factor(infile3$Q30.2)))
 kwq11on30.2 <- kruskal.test(infile3$Q11 ~ as.factor(infile3$Q30.2))
 #TukeyHSD(aov(infile3$Q11 ~ as.factor(infile3$Q30.2)))
-boxplot(EBPAS ~ Q11, data=infile3)
 ```
 
 ####  Summary Table of Education Question KW Results
@@ -1076,7 +1163,7 @@ out3covar <- t(
                 )
 
 colnames(out3covar) <- c("P Value", "Significant (1=Yes, 0=No)")
-rownames(out3covar) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
+rownames(out3covar) <- c("Question 26","Question 27","Question 28.2c","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
 
 kable(out3covar,caption="Question 3 Covariate Analysis by KW Test")
 
@@ -1110,7 +1197,7 @@ out6covar <- t(
                 )
 
 colnames(out6covar) <- c("P Value", "Significant (1=Yes, 0=No)")
-rownames(out6covar) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
+rownames(out6covar) <- c("Question 26","Question 27","Question 28.2c","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
 
 kable(out6covar,caption="Question 6 Covariate Analysis by KW Test")
 
@@ -1144,7 +1231,7 @@ out9covar <- t(
                 )
 
 colnames(out9covar) <- c("P Value", "Significant (1=Yes, 0=No)")
-rownames(out9covar) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
+rownames(out9covar) <- c("Question 26","Question 27","Question 28.2c","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
 
 kable(out9covar,caption="Question 9 Covariate Analysis by KW Test")
 
@@ -1176,21 +1263,59 @@ out11covar <- t(data.frame(c(ed_11on26, ed_11on26_adj),
                 )
 
 colnames(out11covar) <- c("P Value", "Significant (1=Yes, 0=No)")
-rownames(out11covar) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
+rownames(out11covar) <- c("Question 26","Question 27","Question 28.2c","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
 
 kable(out11covar,caption="Question 11 Covariate Analysis by KW Test")
 ```
 
+* Question 3 is signficiant for an association with clinical grouping  (28.2c)
+* Question 6 is signficiant for an association with clinical grouping  (28.2c)
+* Question 9 is signficiant for an association with interest in a research career  (30.1)
+* Question 11 is signficiant for an association with clinical grouping  (28.2c)
+
+More detail on these significant results in the next section.
+
 ####  Post-Hoc Tests on Significant KW Tests
 
-We use the Dunn test to test for pairwise differences following KW significance tests. This is a non-parametric equivalent to the Tukey test folowing ANOVA.
-
-```{r Post-Hoc Dunn Tests for significant KW Tests, echo=FALSE}
-dunn.test(x=infile3$Q3, g=as.factor(infile3$Q28.2), method="bh", alpha=0.05,wrap=FALSE)
-dunn.test(x=infile3$Q6, g=as.factor(infile3$Q28.2), method="bh", alpha=0.05,wrap=FALSE)
-dunn.test(x=infile3$Q9, g=as.factor(infile3$Q30.1), method="bh", alpha=0.05,wrap=FALSE)
-dunn.test(x=infile3$Q11, g=as.factor(infile3$Q28.2), method="bh", alpha=0.05,wrap=FALSE)
+We use the Dunn test to test for pairwise differences following KW significance tests. This is a non-parametric equivalent to the Tukey test folowing ANOVA. The multiple-comparisons correction here is for family-wise error rate (FWER) using the Benjamini-Hochberg method as implemented in the dunn.test R package.
+ 
+##### Question Three:
+```{r Post-Hoc Dunn Tests for significant KW Tests Q3, echo=FALSE}
+dunn.test(x=infile3$Q3, g=as.factor(infile3$Q28.2c), method="bh", alpha=0.05,wrap=FALSE)
+ddply(infile3, ~Q28.2c, summarize, mean=mean(Q3, na.rm=TRUE), median=median(Q3), N=length(Q6))
 ```
+
+For question three's significant association with clinical year, we find that group 1 (pre-didactic) is significantly different from group 2 and 3 (pre-clinical and clinical). The pre-clinical and clinical groups are not significantly different from each other.
+
+Pre-didactic students are significantly less likely to agree with the statement "My medical education has adequately prepared me to practice personalized medication" than are either pre-clinical or clinical students.
+
+##### Question Six:
+```{r Post-Hoc Dunn Tests for significant KW Tests Q6, echo=FALSE}
+dunn.test(x=infile3$Q6, g=as.factor(infile3$Q28.2c), method="bh", alpha=0.05,wrap=FALSE)
+ddply(infile3, ~Q28.2c, summarize, mean=mean(Q6, na.rm=TRUE), median=median(Q6), N=length(Q6))
+```
+
+For question six's significant association with clinical year, we find that group 1 (pre-didactic) is significantly different from group 2 and 3 (pre-clinical and clinical). The pre-clinical and clinical groups are not significantly different from each other.
+
+Pre-clinical students are significantly less likely to agree with the statement "I know whom to ask questions regarding genomic testing" than are either pre-clinical or clinical students. The pre-clinical and clinical groups were not significantly different from each other.
+
+##### Question Nine:
+```{r Post-Hoc Dunn Tests for significant KW Tests Q9, echo=FALSE}
+dunn.test(x=infile3$Q9, g=as.factor(infile3$Q30.1), method="bh", alpha=0.05,wrap=FALSE)
+ddply(infile3, ~Q30.1, summarize, mean=mean(Q9, na.rm=TRUE), median=median(Q9), N=length(Q9))
+```
+
+For educational question nine, those who do not want to have a research career ("0") are significantly different from those who do want a research career, but not significantly different from those who are not sure if they want a research career. Those who do want a research career are significantly different from those who do not want a research career and those who are not sure if they want a research career.
+
+Students who want a research career are significantly more likely to agree with the statement "I think it is important to learn about personalized medicine" than both students who are not sure if they want a research career and students who do not want a research career. Students who do not want a research career are not significantly different in their agreement with this statement than those who do not know if they want a research career.
+
+
+```{r Post-Hoc Dunn Tests for significant KW Tests Q11, echo=FALSE}
+dunn.test(x=infile3$Q11, g=as.factor(infile3$Q28.2c), method="bh", alpha=0.05,wrap=FALSE)
+ddply(infile3, ~Q28.2c, summarize, mean=mean(Q11, na.rm=TRUE), median=median(Q11), N=length(Q11))
+```
+
+Pre-didactic students are significantly less likely to agree with the statement "My professors have encouraged the use of personalized medicine" then either pre-clinical or clinical students. Pre-clinical students are significantly MORE LIKELY to agree with the statement than either pre-clinical OR clinical students. Clinical students are signiciantly more likely to agree with the statement than pre-didactic students, but significantly less likely to agree with the statement than pre-clinical students.
 
 ## Genomic Testing Question Analysis (Pooled Q18-25)
 
@@ -1206,7 +1331,7 @@ hist(infile3$genomics,xlab="Genomics Score",breaks=11,main="Histogram of Genomic
 
 gen_26 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q26)))
 gen_27 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q27)))
-gen_28.2 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q28.2)))
+gen_28.2 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q28.2c)))
 gen_29.1 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q29.1)))
 gen_29.2 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q29.2)))
 gen_30.1 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q30.1)))
@@ -1250,10 +1375,93 @@ rownames(gen_out_covar) <- c("Question 26","Question 27","Question 28.2","Questi
 kable(gen_out_covar,caption="Genomics Covariate ANOVA Analysis (P-Values)")
 ```
 
-```{r}
+```{r, echo=FALSE}
 ddply(infile3, ~Q27, summarize, mean=mean(genomics, na.rm=TRUE), N=length(genomics))
-ddply(infile3, ~Q28.2, summarize, mean=mean(genomics, na.rm=TRUE), N=length(genomics))
-
+ddply(infile3, ~Q28.2c, summarize, mean=mean(genomics, na.rm=TRUE), N=length(genomics))
 ```
 
+```{r Tukey-HSD for genomics, echo=FALSE}
+TukeyHSD(aov(infile3$genomics ~ as.factor(infile3$Q27)))
+TukeyHSD(aov(infile3$genomics ~ as.factor(infile3$Q28.2c)))
+```
+
+* Males were significantly more likely to score a higher result on the genomics section (questions 18-25) than were females. (p<0.0018) __Obviously this is not a real result: We will build a linear model to control for male's apparent tendency to overrate their genetic testing knowledge and ability__.
+*  Pre-didactic students scored significantly lower on the genomics section when compared to either clinical (P<0.0000001) or pre-clinical (p<0.0000214) students. Pre-clinical and clinical students did not score significantly differently.
+
+### Regression model for genomics section
+
+We want to build a model using questions 26-30.2 to predict score on the genetics/genomics section of the survey.
+
+```{r regression model, echo=FALSE}
+## Research interest (clinical and translational vs. basic)
+# Attempt number one: put everything into 3 categories
+# Putting clinical and translational together
+infile3$Q30c <- infile3$Q30.2
+infile3$Q30c[infile3$Q30c==4] <- 0
+infile3$Q30c[infile3$Q30c==1] <- 1
+infile3$Q30c[infile3$Q30c==2] <- 1
+infile3$Q30c[infile3$Q30c==3] <- 2
+
+infile3$Q30c[infile3$Q30c==12] <- 1
+infile3$Q30c[infile3$Q30c==23] <- 2
+infile3$Q30c[infile3$Q30c==123] <- 0
+infile3$Q30c[infile3$Q30c==1234] <- 0
+
+table(infile3$Q30c)
+infile3$Q30c <- as.factor(infile3$Q30c)
+#levels(infile3$Q30c)
+
+# Attempt number two: put everything into 3 categories
+# Putting translational and basic science together
+infile3$Q30c <- infile3$Q30.2
+infile3$Q30c[infile3$Q30c==4] <- 0
+infile3$Q30c[infile3$Q30c==1] <- 1
+infile3$Q30c[infile3$Q30c==2] <- 2
+infile3$Q30c[infile3$Q30c==3] <- 2
+
+infile3$Q30c[infile3$Q30c==12] <- 1
+infile3$Q30c[infile3$Q30c==23] <- 2
+infile3$Q30c[infile3$Q30c==123] <- 0
+infile3$Q30c[infile3$Q30c==1234] <- 0
+
+table(infile3$Q30c)
+infile3$Q30c <- as.factor(infile3$Q30c)
+#levels(infile3$Q30c)
+
+## Re-Do Level analysis for Q 30.1
+infile3$Q30.1c <- infile3$Q30.1
+infile3$Q30.1c[infile3$Q30.1c==2] <- 0
+infile3$Q30.1c <- as.factor(infile3$Q30.1c)
+table(infile3$Q30.1c)
+
+infile3$Q27.f <- as.factor(infile3$Q27)
+infile3$Q29.1.f <- as.factor(infile3$Q29.1) 
+infile3$Q30.1.f <- as.factor(infile3$Q30.1) 
+
+model1 <- lm(genomics ~ Q26 + Q27.f + Q28.2 + Q29.1.f + Q30.1.f + Q30c,  data = infile3)
+summary(model1)
+
+model2 <- lm(genomics ~ Q27.f + Q28.2 + Q29.1.f + Q30.1.f + Q30c,  data = infile3)
+summary(model2)
+
+model3A <- lm(genomics ~ Q27.f + Q28.2 + Q29.1.f + Q30.1.f,  data = infile3)
+summary(model3A)
+
+model3B <- lm(genomics ~ Q27.f + Q28.2 + Q29.1.f + Q30c,  data = infile3)
+summary(model3B)
+
+model4 <- lm(genomics ~ Q27.f + Q28.2 + Q29.1 + Q30.1.f,  data = infile3)
+summary(model4)
+
+model5 <- lm(genomics ~ Q27.f + Q28.2 + Q30c ,data=infile3)
+summary(model5)
+
+### Re-doing models with new Q30.1c
+model1 <- lm(genomics ~ Q26 + Q27 + Q28.2 + Q29.1.f + Q30.1c + Q30c,  data = infile3)
+summary(model1)
+
+model2 <- lm(genomics ~ Q27 + Q28.2 + Q29.1.f + Q30.1c + Q30c,  data = infile3)
+summary(model2)
+
+```
 
