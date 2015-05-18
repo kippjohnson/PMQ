@@ -159,7 +159,7 @@ As you can see, the Cronbach's alpha for these sections are extremely high.
 
 ## Data Analysis & Significance Tests
 
-#### Step 1: Frequencies
+#### Frequencies
 
 *Question Response Frequencies*: Tables of each question's (1-25) response frequency. These questions are categorized as:
 
@@ -202,24 +202,23 @@ kable(data.frame(table(infile$Q24)),col.names=c("Question 24", "Frequency"),alig
 kable(data.frame(table(infile$Q25)),col.names=c("Question 25", "Frequency"),align="l") # Ability to make treatment recommendations based upon genomic test results
 ```
 
-### Step 2: EBPAS Collapsed T-Tests
+### EBPAS Collapsed T-Tests
 
-First, answers for questions 13-25 were tested for an association with EBPAS Score (Questions 1-12 excluding the education questions) using ANOVA followed by Tukey Honest Signficant Differences. Second, the answers were collapsed into binary categories and T-tests for association with EBPAS score were performed.
+Answers for questions 13-25 were tested for an association with EBPAS Score (Questions 1-12 excluding the education questions) using ANOVA followed by Tukey Honest Signficant Differences if called for. After ANOVA, the answers were collapsed into binary categories and T-tests for association with EBPAS score were performed. ANOVA results are not currently shown.
 
 The R output for each ANOVA and Collapsed T-test is shown below. After the end of the output there is a table summarizing the results in a fashion analagous to Table 6 in Overby et al.
 
-The format for each ANOVA is EBPAS ~ Question Answer Choices. After that, if the ANOVA is significant, a Tukey HSD test is computed. The TukeyHSD test shows which answer choices in the ANOVA results are actually associated with significantly different EBPAS scores.
+The collapsed T-tests were collapsed by assigning the responses in the first three Likert Groups to one group (For example, "Not At All Comfortable, Not Very Comfortable, and Neither Comfortable nor Uncomfortable" were collapsed to *Group 1*), and collapsing the remaining Likery Groups to a second group ("Comfortable and Very Comfortable were assigned to *Group Two*"). 
 
-The collapsed T-tests were collapsed by assigning the responses in the first three Likert Groups to one group (For example, "Not At All Comfortable, Not Very Comfortable, and Neither Comfortable nor Uncomfortable" were collapsed to *Group 1*), and collapsing the remaining Likery Groups to a second group ("Comfortable and Very Comfortable were assigned to *Group Two*") 
-
-Note: The EBPAS scores totals are approximately normal by visual analysis:
+The EBPAS scores totals are approximately normal by visual analysis:
 
 ```{r EBPASPLOT, echo=FALSE}
 hist(infile3$EBPAS, xlab="EBPAS Score", main="Histogram of EBPAS Totals")
 ```
 
+Headings for question 13-25 below are a placeholder in the markdown document in case we want to look at the tests in further detail. Individual results can be shown if needed, but are currently summarized in the below table.
 ##### Question 13
-```{r Q13, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q13, echo=FALSE, results='hide', fig.show='hide'}
 ### Q13
 #Q13 T-test
 t.test(infile3$EBPAS ~ infile3$Q13) #NS
@@ -227,7 +226,7 @@ boxplot(EBPAS ~ Q13, data=infile3)
 ```
 
 ##### Question 14
-```{r Q14, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q14, echo=FALSE, results='hide', fig.show='hide'}
 ### Q14
 #Q14 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q14))) #NS
@@ -244,7 +243,7 @@ s14 <- ddply(infile3, ~infile3$Q14c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 15
-```{r Q15, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q15, echo=FALSE, results='hide', fig.show='hide'}
 
 ### Q15
 # Q15 ANOVA
@@ -270,7 +269,7 @@ s15 <- ddply(infile3, ~infile3$Q15c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 16
-```{r Q16, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q16, echo=FALSE, results='hide', fig.show='hide'}
 ### Q16
 #Q16 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q16))) #significant
@@ -293,7 +292,7 @@ s16 <- ddply(infile3, ~infile3$Q16c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 17
-```{r Q17, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q17, echo=FALSE, results='hide', fig.show='hide'}
 
 ### Q17
 #Q17 ANOVA
@@ -317,7 +316,7 @@ s17 <- ddply(infile3, ~infile3$Q17c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 18
-```{r Q18, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q18, echo=FALSE, results='hide', fig.show='hide'}
 ### Q18
 #Q18 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q18)))
@@ -341,7 +340,7 @@ s18 <- ddply(infile3, ~infile3$Q18c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 19
-```{r Q19, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q19, echo=FALSE, results='hide', fig.show='hide'}
 ### Q19
 #Q19 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q19)))
@@ -365,7 +364,7 @@ s19 <- ddply(infile3, ~infile3$Q19c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 20
-```{r Q20, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q20, echo=FALSE, results='hide', fig.show='hide'}
 
 ### Q20
 #Q20 ANOVA
@@ -390,7 +389,7 @@ s20 <- ddply(infile3, ~infile3$Q20c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 21
-```{r Q21, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q21, echo=FALSE, results='hide', fig.show='hide'}
 
 ### Q21
 #Q21 ANOVA
@@ -415,7 +414,7 @@ s21 <- ddply(infile3, ~infile3$Q21c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 22
-```{r Q22, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q22, echo=FALSE, results='hide', fig.show='hide'}
 ### Q22
 #Q22 ANOVA
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q22)))
@@ -439,7 +438,7 @@ s22 <- ddply(infile3, ~infile3$Q22c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 23
-```{r Q23, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q23, echo=FALSE, results='hide', fig.show='hide'}
 
 ### Q23
 #Q23 ANOVA
@@ -464,7 +463,7 @@ s23 <- ddply(infile3, ~infile3$Q23c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 24
-```{r Q24, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q24, echo=FALSE, results='hide', fig.show='hide'}
 
 ### Q24
 #Q24 ANOVA
@@ -488,7 +487,7 @@ s24 <- ddply(infile3, ~infile3$Q24c, summarize, N=length(EBPAS), mean=mean(EBPAS
 ```
 
 ##### Question 25
-```{r Q25, echo=FALSE, results='hold', fig.show='hide'}
+```{r Q25, echo=FALSE, results='hide', fig.show='hide'}
 
 ### Q25
 #Q25 ANOVA
@@ -615,7 +614,7 @@ After correction for multiple testing, EBPAS is significantly associated with qu
 * On question 22, those who answered "not at all/not very/neither comfortable not uncomfortable" had a significantly lower EBPAS score than those who answered "comfortable or very comfortable" (P=<0.0004)
 * On question 23, those who answered "not at all/not very/neither comfortable not uncomfortable" had a significantly lower EBPAS score than those who answered "comfortable or very comfortable" (P=<0.0004)
 
-### Statistical Tests (ANOVA and Collapsed T-tests) for four education questions
+### Statistical Tests for four education questions
 
 In the previous section, we performed ANOVA and collapsed T tests for the 8 EBPAS questions on the predictor questions 13-25. For the education questions 3, 6, 9, and 11, we cannot combine them into one category because Cronbach's alpha is <0.7 for them. However, we can analyze the questions individually, as is done here:
 
