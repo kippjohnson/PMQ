@@ -1,7 +1,7 @@
 ---
 title: "Medical Student Attitudes Toward Personalized Medicine Report"
 author: "Kipp Johnson"
-date: "May 15, 2015"
+date: "May 19, 2015"
 output: html_document
 ---
 
@@ -11,7 +11,7 @@ This analysis is conducted in R using R Markdown with Knitr for report generatio
 
 Much of the actual analysis code is omitted from being embedded in the printout of this report because it's tedious to look at along with the results. However, it is completely available in the markdown file in the Github repository (ProjectReport.Rmd).
 
-NOTE: I got tired of typing "after correction for multiple testing" report. All P-Values which are reported as significant in this text have undergone correction for multiple testing using either the Bonferroni, Tukey honest significant differences method, or Benjami-Hochberg method. I usually use the Bonferroni method (0.05/n tests); in one section it makes more sense to use a more elaborate method (B-H) or Tukey, and it is stated when it is used. Tukey HSD is used following significant ANOVA results.
+NOTE: I got tired of typing "after correction for multiple testing" in this report. All P-Values which are reported as significant in this text have undergone correction for multiple testing using either the Bonferroni, Tukey honest significant differences method, or Benjami-Hochberg method. I usually use the Bonferroni method (0.05/n tests); in one section it makes more sense to use a more elaborate method (B-H) or Tukey, and it is stated when it is used. Tukey HSD is used following significant ANOVA results.
 
 If you are trying to replicate this report, ensure the following R packages are installed and loaded:
 ```{r Call required libraries, error=FALSE,warning=FALSE,autodep=FALSE,collapse=TRUE,message=FALSE}
@@ -54,7 +54,7 @@ kable(demog, digits=2,padding=0)
 
 
 ### EBPAS Statistics
-The first step is to compute EBPAS total score, along with its subsets for scores of openness, and divergence. Education is not included in the EBPAS. Questions 1-12 excluding 3, 6, 9, and 11 define the EBPAS scale on the survey. 3, 6, 9, and 11 are the education questions. There are a number of people who did not completely fill out the first 12 questions of the survey, and for the analysis they will be dropped because we have a large enough number of respondents without them.
+The first step is to compute EBPAS total score, along with its subsets for scores of openness and divergence. Education is not included in the EBPAS. Questions 1-12 excluding 3, 6, 9, and 11 define the EBPAS scale on the survey. 3, 6, 9, and 11 are the education questions. There are a number of people who did not completely fill out the first 12 questions of the survey, and for the analysis they will be dropped because we have a large enough number of respondents without them.
 
 Questions 2, 4, 5, and 8 are 'divergence' questions, where the questions have answers which have been formulated to be the inverse of the answering scale. They have been reversed in our analysis.
 
@@ -99,9 +99,9 @@ opennessstats <- sums(infile3$openness)
 divergencestats <- sums(infile3$divergence)
 educationstats <- sums(infile3$education)
 
+#EBPAS_alpha <- alpha(infile3[,c(2,4,7,8,10,11,12,13,div_corrected)])
 
 divergence_corrected <- abs(infile3[,c("Q2","Q4","Q5","Q8")] - 6)
-#EBPAS_alpha <- alpha(infile3[,c(2,4,7,8,10,11,12,13,div_corrected)])
 
 EBPAS_alpha <- 0.78
 #EBPAS_alpha <- alpha(infile3[,c("Q1","Q2","Q4","Q5","Q7","Q8","Q10","Q12")])
@@ -109,6 +109,8 @@ openness_alpha <- alpha(infile3[,c("Q1","Q7","Q10","Q12")])
 #divergence_alpha <- alpha(infile3[,c("Q2","Q4","Q5","Q8")])
 divergence_alpha <- alpha(divergence_corrected)
 education_alpha <- alpha(infile3[,c("Q3","Q6","Q9","Q11")]) 
+
+opennessdivergencealpha <- alpha( data.frame(c( infile3[,c("Q1","Q7","Q10","Q12")], divergence_corrected) ))
 
 EBPASstats <- c(EBPASstats, EBPAS_alpha)
 #EBPASstats <- c(EBPASstats, EBPAS_alpha$total[[1]])
@@ -123,11 +125,13 @@ rownames(EBPAStable) <- c("EBPAS", "education", "divergence","openness")
 
 `r kable(EBPAStable, digits=3)`
 
+The Cronbach's alpha for the combined openness & divergence is `r opennessdivergencealpha$total[[1]]`.
+
 #### Cronbach's alpha for different possible 3-question subsets of education
 From the education questions 3, 6, 9, and 11, we can make four different possible subsets of three questions: 3, 6, 9; 3, 9, 11; 3, 6, 11; 6, 9, 11. Here, we compute the Cronbach's alpha for these possible subsets of questions.
 
 ```{r, echo=FALSE, warning=FALSE}
-subset369  <- alpha(infile3[,c("Q3","Q6","Q9")])$total[[1]]
+subset369  <- alpha(infile3[,c("Q3","Q6","Q9")])$total[[1]] #unavoidable warning message...
 subset3911 <- alpha(infile3[,c("Q3","Q9","Q11")])$total[[1]]
 subset3611 <- alpha(infile3[,c("Q3","Q6","Q11")])$total[[1]]
 subset6911 <- alpha(infile3[,c("Q6","Q9","Q11")])$total[[1]]
@@ -222,7 +226,8 @@ Headings for question 13-25 below are a placeholder in the markdown document in 
 ### Q13
 #Q13 T-test
 t.test(infile3$EBPAS ~ infile3$Q13) #NS
-boxplot(EBPAS ~ Q13, data=infile3)
+CT13 <- t.test(infile3$EBPAS ~ infile3$Q13) # NS)
+s13 <- ddply(infile3, ~infile3$Q13, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
 ```
 
 ##### Question 14
@@ -521,7 +526,7 @@ Pcritical <- 0.05/12
 
 print(c("Critical P-Value:  ", Pcritical) )
 
-
+ebpas_13adj <- CT13$p.value < Pcritical
 ebpas_14adj <- CT14$p.value < Pcritical
 ebpas_15adj <- CT15$p.value < Pcritical
 ebpas_16adj <- CT16$p.value < Pcritical
@@ -535,6 +540,8 @@ ebpas_23adj <- CT23$p.value < Pcritical
 ebpas_24adj <- CT24$p.value < Pcritical
 ebpas_25adj <- CT25$p.value < Pcritical
 
+q13.1 <- c(s13$N[1], s13$mean[1], s13$SD[1], CT13$p.value, ebpas_13adj)
+q13.1 <- c(s13$N[2], s13$mean[2], s13$SD[2], CT13$p.value, ebpas_13adj)
 q14.1 <- c(s14$N[1], s14$mean[1], s14$SD[1], CT14$p.value, ebpas_14adj)
 q14.2 <- c(s14$N[2], s14$mean[2], s14$SD[2], CT14$p.value, ebpas_14adj)
 q15.1 <- c(s15$N[1], s15$mean[1], s15$SD[1], CT15$p.value, ebpas_15adj)
@@ -560,7 +567,8 @@ q24.2 <- c(s24$N[2], s24$mean[2], s24$SD[2], CT24$p.value, ebpas_24adj)
 q25.1 <- c(s25$N[1], s25$mean[1], s25$SD[1], CT25$p.value, ebpas_25adj)
 q25.2 <- c(s25$N[2], s25$mean[2], s25$SD[2], CT25$p.value, ebpas_25adj)
 
-out <- data.frame(t(data.frame(q14.1,q14.2,
+out <- data.frame(t(data.frame(q13.1,q13.1,
+                               q14.1,q14.2,
                                q15.1,q15.2,
                                q16.1,q16.2,
                                q17.1,q17.2,
@@ -574,7 +582,9 @@ out <- data.frame(t(data.frame(q14.1,q14.2,
                                q25.1,q25.2)))
 
 colnames(out) <- c("N","Mean","SD","T-Test P-Value","P-Value Significant? (1=Yes, 0=No)")
-row.names(out) <- c("Question 14 Group 1",
+row.names(out) <- c("Question 13 Group 1",
+                    "Question 13 Group 2",
+                    "Question 14 Group 1",
                     "Question 14 Group 2",
                     "Question 15 Group 1",
                     "Question 15 Group 2",
@@ -876,7 +886,7 @@ kable(out11,digits=6)
 ## Covariate Analysis 
 ### Further EBPAS Analyses (against covariates using ANOVA, Questions 26-31.2)
 
-Because EBPAS score is a continuous vector of integers and is approximately normally distributed, the appropriate test to use here is ANOVA. We are looking now for associations between EBPAS and the covariates.
+Because EBPAS score is a vector of integers and is approximately normally distributed, the appropriate test to use here is ANOVA. We are looking now for associations between EBPAS and the covariates.
 
 ##### Covariate Grouping
 We need to create a new grouping from Question 28.2 (Year of medical school). We are just merging the M3 and M4 students into one "clinical" grouping, while coding M1s as "pre-didactic" and M2s as "pre-clinical" as was done in Caroline's Poster. The new vector we create is called Q28.2c ("c" for collapsed).
@@ -1316,6 +1326,158 @@ ddply(infile3, ~Q28.2c, summarize, mean=mean(Q11, na.rm=TRUE), median=median(Q11
 
 Pre-didactic students are significantly less likely to agree with the statement "My professors have encouraged the use of personalized medicine" then either pre-clinical or clinical students. Pre-clinical students are significantly MORE LIKELY to agree with the statement than either pre-clinical OR clinical students. Clinical students are signiciantly more likely to agree with the statement than pre-didactic students, but significantly less likely to agree with the statement than pre-clinical students.
 
+## Analysis for "Comfort in Knowledge about Genomic Testing"  (Questions 18-21)
+```{r Genomic knowledge Question Analysis, echo=FALSE}
+
+infile3 <- mutate(infile3, genomicknowledge=Q18+Q19+Q20+Q21)
+
+par(mfrow=c(1,2))
+barplot(sort(infile3$genomicknowledge),xlab='Respondent',main="Genomic Knowledge Score",ylab='Score')
+hist(infile3$genomicknowledge,xlab="Score",breaks=11,main="Genomics Knowledge Score")
+
+gen_26k <- anova(lm(infile3$genomicknowledge ~ as.factor(infile3$Q26)))
+gen_27k <- anova(lm(infile3$genomicknowledge ~ as.factor(infile3$Q27)))
+gen_28.2k <- anova(lm(infile3$genomicknowledge ~ as.factor(infile3$Q28.2c)))
+gen_29.1k <- anova(lm(infile3$genomicknowledge ~ as.factor(infile3$Q29.1)))
+gen_29.2k <- anova(lm(infile3$genomicknowledge ~ as.factor(infile3$Q29.2)))
+gen_30.1k <- anova(lm(infile3$genomicknowledge ~ as.factor(infile3$Q30.1)))
+gen_30.2k <- anova(lm(infile3$genomicknowledge ~ as.factor(infile3$Q30.2)))
+
+# For this form of ANOVA, to access the P-Value, you unfortunately need to add [[5]][1] to the saved result.
+
+### Question 3
+gen_26_pk <- gen_26k[[5]][1]
+gen_27_pk <- gen_27k[[5]][1]
+gen_28.2_pk <- gen_28.2k[[5]][1]
+gen_29.1_pk <- gen_29.1k[[5]][1]
+gen_29.2_pk <- gen_29.2k[[5]][1]
+gen_30.1_pk <- gen_30.1k[[5]][1]
+gen_30.2_pk <- gen_30.2k[[5]][1]
+
+PCritical_Gen <- 0.05/7
+
+gen_26_p_adjk <- gen_26k[[5]][1] < PCritical_Gen
+gen_27_p_adjk <- gen_27k[[5]][1] < PCritical_Gen
+gen_28.2_p_adjk <- gen_28.2k[[5]][1] < PCritical_Gen
+gen_29.1_p_adjk <- gen_29.1k[[5]][1] < PCritical_Gen
+gen_29.2_p_adjk <- gen_29.2k[[5]][1] < PCritical_Gen
+gen_30.1_p_adjk <- gen_30.1k[[5]][1] < PCritical_Gen
+gen_30.2_p_adjk <- gen_30.2k[[5]][1] < PCritical_Gen
+
+gen_out_covark <- t(data.frame(
+                   c(gen_26_pk, gen_26_p_adjk),
+                   c(gen_27_pk, gen_27_p_adjk),
+                   c(gen_28.2_pk, gen_28.2_p_adjk),
+                   c(gen_29.1_pk, gen_29.1_p_adjk),
+                   c(gen_29.2_pk, gen_29.2_p_adjk),
+                   c(gen_30.1_pk, gen_30.1_p_adjk),
+                   c(gen_30.2_pk, gen_30.2_p_adjk)
+                   )
+                )
+
+colnames(gen_out_covark) <- c("P Value", "Significant (1=Yes, 0=No)")
+rownames(gen_out_covark) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
+
+kable(gen_out_covark,caption="Genomic Knowledge Covariate ANOVA Analysis (P-Values)")
+```
+
+```{r, echo=FALSE}
+ddply(infile3, ~Q27, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge))
+ddply(infile3, ~Q28.2c, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge))
+ddply(infile3, ~Q29.2, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge))
+```
+
+```{r Tukey-HSD for genomic knowledge, echo=FALSE}
+TukeyHSD(aov(infile3$genomicknowledge ~ as.factor(infile3$Q27)))
+TukeyHSD(aov(infile3$genomicknowledge ~ as.factor(infile3$Q28.2c)))
+TukeyHSD(aov(infile3$genomicknowledge ~ as.factor(infile3$Q29.2)))
+```
+
+* Males had a significantly higher mean score (12.88) in the section of the survey assessing comfort in knowledge about genomic testing than females (11.08), p<0.0015
+* Pre-didactic students had a significantly lower mean score on questions 18-21 (9.72) than either pre-clinical or clinical students (means=12.79 and 13.16, p<0.00004 and P<0.00001), respectively. There was not a significant difference between the scores for pre-clinical and clinical students.
+* MD/PhD students had a significantly higher mean score (15.31) than either MD/MPH (11.16) or MD/MSCR (11.22) students on questions 18-21 (p<0.031 and 0.014, respectively). There was not a significant difference in the mean score between MD/MPH and MD/MSCR students.
+
+
+## Analysis for "Comfort in Ability to do Genomic Testing"  (Questions 22-25)
+```{r Genomic ability Question Analysis, echo=FALSE}
+
+infile3 <- mutate(infile3, genomiccomfort=Q22+Q23+Q24+Q25)
+
+par(mfrow=c(1,2))
+barplot(sort(infile3$genomiccomfort),xlab='Respondent',main="Genomic Ability Score",ylab='Score')
+hist(infile3$genomiccomfort,xlab="Score",breaks=11,main="Genomics Ability Score")
+
+gen_26c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q26)))
+gen_27c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q27)))
+gen_28.2c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q28.2c)))
+gen_29.1c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q29.1)))
+gen_29.2c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q29.2)))
+gen_30.1c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q30.1)))
+gen_30.2c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q30.2)))
+
+# For this form of ANOVA, to access the P-Value, you unfortunately need to add [[5]][1] to the saved result.
+
+### Question 3
+gen_26_pc <- gen_26c[[5]][1]
+gen_27_pc <- gen_27c[[5]][1]
+gen_28.2_pc <- gen_28.2c[[5]][1]
+gen_29.1_pc <- gen_29.1c[[5]][1]
+gen_29.2_pc <- gen_29.2c[[5]][1]
+gen_30.1_pc <- gen_30.1c[[5]][1]
+gen_30.2_pc <- gen_30.2c[[5]][1]
+
+PCritical_Gen <- 0.05/7
+
+gen_26_p_adjc <- gen_26c[[5]][1] < PCritical_Gen
+gen_27_p_adjc <- gen_27c[[5]][1] < PCritical_Gen
+gen_28.2_p_adjc <- gen_28.2c[[5]][1] < PCritical_Gen
+gen_29.1_p_adjc <- gen_29.1c[[5]][1] < PCritical_Gen
+gen_29.2_p_adjc <- gen_29.2c[[5]][1] < PCritical_Gen
+gen_30.1_p_adjc <- gen_30.1c[[5]][1] < PCritical_Gen
+gen_30.2_p_adjc <- gen_30.2c[[5]][1] < PCritical_Gen
+
+gen_out_covarc <- t(data.frame(
+                   c(gen_26_pc, gen_26_p_adjc),
+                   c(gen_27_pc, gen_27_p_adjc),
+                   c(gen_28.2_pc, gen_28.2_p_adjc),
+                   c(gen_29.1_pc, gen_29.1_p_adjc),
+                   c(gen_29.2_pc, gen_29.2_p_adjc),
+                   c(gen_30.1_pc, gen_30.1_p_adjc),
+                   c(gen_30.2_pc, gen_30.2_p_adjc)
+                   )
+                )
+
+colnames(gen_out_covarc) <- c("P Value", "Significant (1=Yes, 0=No)")
+rownames(gen_out_covarc) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
+
+kable(gen_out_covarc,caption="Genomic Ability Covariate ANOVA Analysis (P-Values)")
+```
+
+```{r, echo=FALSE}
+ddply(infile3, ~Q27, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort))
+ddply(infile3, ~Q28.2c, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort))
+```
+
+```{r Tukey-HSD for genomic comfort, echo=FALSE}
+TukeyHSD(aov(infile3$genomiccomfort ~ as.factor(infile3$Q27)))
+TukeyHSD(aov(infile3$genomiccomfort ~ as.factor(infile3$Q28.2c)))
+```
+
+* Males had a significantly higher mean score (10.05) in the section of the survey assessing comfort in ability to do genomic testing than females (8.51), p<0.007.
+* Pre-didactic students had a significantly lower mean score on questions 22-25 (7.02) than either pre-clinical or clinical students (means=9.67 and 10.61, p<0.0007 and p<0.00001), respectively. There was not a significant difference between the mean score for pre-clinical and clinical students.
+
+
+### Difference between means of 18-21 and 22-25
+```{r t-test for difference in genomic knowledge and ability,echo=FALSE}
+difkc <- t.test(infile3$genomicknowledge, infile3$genomiccomfort)
+mgk <- mean(infile3$genomicknowledge,na.rm=TRUE); 
+mgc <- mean(infile3$genomiccomfort,na.rm=TRUE);
+#difkc$p.value
+```
+There is a signifificant difference in the mean scores for responses between questions 18-21 and 22-25 (p=`r difkc$p.value`). The mean for the former is `r mgk`; the mean for the latter is `r mgc`.
+
+
+
 ## Genomic Testing Question Analysis (Pooled Q18-25)
 
 Because our Cronbach's Alpha was >0.90 for the two genomic testing sections, we can pool the data together and conduct analysis to test for associations with the covariates in questions 26-30.2.
@@ -1325,8 +1487,8 @@ Because our Cronbach's Alpha was >0.90 for the two genomic testing sections, we 
 infile3 <- mutate(infile3, genomics=Q18+Q19+Q20+Q21+Q22+Q23+Q24+Q25)
 
 par(mfrow=c(1,2))
-barplot(sort(infile3$genomics),xlab='Respondent',main="Sorted Totals for Genomics Total Score")
-hist(infile3$genomics,xlab="Genomics Score",breaks=11,main="Histogram of Genomics Total Score")
+barplot(sort(infile3$genomics),xlab='Respondent',main="Genomics Total Score",ylab='Score')
+hist(infile3$genomics,xlab="Genomics Score",breaks=11,main="Genomics Total Score")
 
 gen_26 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q26)))
 gen_27 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q27)))

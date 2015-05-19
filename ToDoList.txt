@@ -13,7 +13,7 @@ XX 4. Compute Cronbach's Alpha for "Comfort in genomic knowledge..." (Q18-21) an
     i. If these are a > 0.7, we can do additional analysis on the section sums as a dependent variable. 
     ii. We could also consider combining these eight questions as one section called something like “Genomic Testing Comfort and Knowledge/Ability.” I’ll do that just in case.
 
-5. Analysis by Chi-Square: I’ve been thinking about whether Chi-square is the best test here: Because our outcomes are technically categorical, I think it’s ok. I know that a some of this was done by Caroline, but it is probably best if I repeat it just to have all of the analysis together in one place.  
+XX 5. Analysis by Chi-Square: I’ve been thinking about whether Chi-square is the best test here: Because our outcomes are technically categorical, I think it’s ok. I know that a some of this was done by Caroline, but it is probably best if I repeat it just to have all of the analysis together in one place.  
     
     a. EBPAS:
     i. EBPAS ~ Age Range
