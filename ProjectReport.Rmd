@@ -2,7 +2,10 @@
 title: "Medical Student Attitudes Toward Personalized Medicine Report"
 author: "Kipp Johnson"
 date: "May 19, 2015"
-output: html_document
+output: 
+  html_document: 
+    number_sections: yes
+    toc: yes
 ---
 
 ## Introduction
@@ -18,17 +21,22 @@ If you are trying to replicate this report, ensure the following R packages are 
 library(knitr) # For report generation, not strictly necessary to run code
 library(psych)
 library(dunn.test)
+library(plyr) # for ddply and mutate function
+library(ggplot2)
+library(gridExtra)
 ```
 
 R code for reading in the data from the Github Repository (/kippjohnson/PMQ):
+
 ```{r Read in data from Github, results='hide'}
-rm(list=ls())
+rm(list=ls()) #clear memory at start
 tmp <- tempfile()
 download.file("https://raw.githubusercontent.com/kippjohnson/PMQ/master/SurveyResponses.csv", destfile=tmp, method="curl")
 infile <- read.csv(tmp,header=TRUE)
 ```
 
 ## Survey Demographics Table
+
 ```{r Demographics Table, echo=FALSE}
 nMales = table(infile$Q27)[[1]]
 nFemales = table(infile$Q27)[[2]]
@@ -173,9 +181,27 @@ As you can see, the Cronbach's alpha for these sections are extremely high.
 * Knowledge of genomic testing concepts (18-21)
 * Ability to understand genomic testing concepts (22-25)
 
-The coding for the question responses is given in the file "DataCoding.txt" in the Github repository. Most of the time it's obvious. 
+The data is coded as follows:
 
-```{r, echo=FALSE}
+* Questions 1-12: 1=not at all, 2=to a slight extent, 3=to a moderate extent, 4=to a great extent, 5=to a very great extent
+* Question 13: 0= no, 1=yes
+* Question 14: 1=would not use, 2=would use, 3=did use
+* Question 15: 1=strongly disagree, 2=disagree, 3=uncertain, 4=agree, 5=strongly agree
+* Questions 16-25: 1=not at all, 2=not very comfortable, 3=neither comfortable nor uncomfortable, 4=comfortable, 5=very comfortable 
+* Question 26: 1=23 or younger, 2=24-25, 3=26 or older
+* Question 27: 0=male, 1=female
+* Question 28.1: 0=no, 1=yes
+* Question 28.2: 1=MS1, 2=MS2, 3=MS3, 4=MS4
+* Question 29.1: 0=no, 1=yes
+* Question 29.2: 1=MD/PhD, 2=MD/MPH, 3=MD/MSCR
+* Question 30.1: 0=no, 1=yes, 2=Don’t Know
+* Question 30.2: 1=Clinical, 2=Translational, 3=Basic Science, 4=Don’t Know (multiple answers were allowed here, e.g. clinical and translational = 12)
+
+
+**I have currently omitted the response frequency tables for brevity; they can easily be added back into the report if you want.**
+
+
+```{r, echo=FALSE, eval=FALSE}
 kable(data.frame(table(infile$Q1)),col.names=c("Question 1", "Frequency"),align="l")
 kable(data.frame(table(infile$Q2)),col.names=c("Question 2", "Frequency"),align="l")
 kable(data.frame(table(infile$Q3)),col.names=c("Question 3", "Frequency"),align="l")
@@ -221,7 +247,9 @@ hist(infile3$EBPAS, xlab="EBPAS Score", main="Histogram of EBPAS Totals")
 ```
 
 Headings for question 13-25 below are a placeholder in the markdown document in case we want to look at the tests in further detail. Individual results can be shown if needed, but are currently summarized in the below table.
+
 ##### Question 13
+
 ```{r Q13, echo=FALSE, results='hide', fig.show='hide'}
 ### Q13
 #Q13 T-test
@@ -231,6 +259,7 @@ s13 <- ddply(infile3, ~infile3$Q13, summarize, N=length(EBPAS), mean=mean(EBPAS)
 ```
 
 ##### Question 14
+
 ```{r Q14, echo=FALSE, results='hide', fig.show='hide'}
 ### Q14
 #Q14 ANOVA
@@ -613,16 +642,140 @@ kable(out, digits=3)
         
 ```
 
+#### Summary Table of Results from Collapsed T-tests (Analagous to Table. 6, Overby et al.) with FDR P-Value correction
+
+```{r Summary table of Collapsed T Test Results (EBPAS) with FDR Correction, echo=FALSE}
+
+pvals <- c(
+CT13$p.value,  
+CT14$p.value,  
+CT15$p.value,  
+CT16$p.value,  
+CT17$p.value,  
+CT18$p.value,  
+CT19$p.value,  
+CT20$p.value,  
+CT21$p.value,  
+CT22$p.value,  
+CT23$p.value, 
+CT24$p.value,  
+CT25$p.value 
+)
+
+pvals_bh <- p.adjust(pvals, method="BH")
+new_pvals_bh <- vector(length=2*length(pvals_bh))
+
+new_pvals_bh <- c(pvals_bh[1], " ")
+
+for(i in 2:length(pvals_bh)){
+  new_pvals_bh <- c(new_pvals_bh, pvals_bh[i], " ")
+}
+
+new_pvals_bh <- as.numeric(new_pvals_bh)
+
+
+q13.1 <- c(s13$N[1], s13$mean[1], s13$SD[1]) 
+q13.1 <- c(s13$N[2], s13$mean[2], s13$SD[2]) 
+q14.1 <- c(s14$N[1], s14$mean[1], s14$SD[1]) 
+q14.2 <- c(s14$N[2], s14$mean[2], s14$SD[2]) 
+q15.1 <- c(s15$N[1], s15$mean[1], s15$SD[1]) 
+q15.2 <- c(s15$N[2], s15$mean[2], s15$SD[2]) 
+q16.1 <- c(s16$N[1], s16$mean[1], s16$SD[1]) 
+q16.2 <- c(s16$N[2], s16$mean[2], s16$SD[2]) 
+q17.1 <- c(s17$N[1], s17$mean[1], s17$SD[1]) 
+q17.2 <- c(s17$N[2], s17$mean[2], s17$SD[2]) 
+q18.1 <- c(s18$N[1], s18$mean[1], s18$SD[1]) 
+q18.2 <- c(s18$N[2], s18$mean[2], s18$SD[2]) 
+q19.1 <- c(s19$N[1], s19$mean[1], s19$SD[1]) 
+q19.2 <- c(s19$N[2], s19$mean[2], s19$SD[2]) 
+q20.1 <- c(s20$N[1], s20$mean[1], s20$SD[1]) 
+q20.2 <- c(s20$N[2], s20$mean[2], s20$SD[2]) 
+q21.1 <- c(s21$N[1], s21$mean[1], s21$SD[1])
+q21.2 <- c(s21$N[2], s21$mean[2], s21$SD[2]) 
+q22.1 <- c(s22$N[1], s22$mean[1], s22$SD[1]) 
+q22.2 <- c(s22$N[2], s22$mean[2], s22$SD[2]) 
+q23.1 <- c(s23$N[1], s23$mean[1], s23$SD[1]) 
+q23.2 <- c(s23$N[2], s23$mean[2], s23$SD[2]) 
+q24.1 <- c(s24$N[1], s24$mean[1], s24$SD[1]) 
+q24.2 <- c(s24$N[2], s24$mean[2], s24$SD[2]) 
+q25.1 <- c(s25$N[1], s25$mean[1], s25$SD[1]) 
+q25.2 <- c(s25$N[2], s25$mean[2], s25$SD[2])
+
+out_bh <- data.frame(t(data.frame(q13.1,q13.1,
+                               q14.1,q14.2,
+                               q15.1,q15.2,
+                               q16.1,q16.2,
+                               q17.1,q17.2,
+                               q18.1,q18.2,
+                               q19.1,q19.2,
+                               q20.1,q20.2,
+                               q21.1,q21.2,
+                               q22.1,q22.2,
+                               q23.1,q23.2,
+                               q24.1,q24.2,
+                               q25.1,q25.2)))
+
+out_bh <- cbind(out_bh, new_pvals_bh)
+out_bh$new_pvals_bh <- as.numeric(out_bh$new_pvals_bh)
+
+pvalsig <- ifelse(as.numeric(out_bh$new_pvals_bh)<0.05, 1, 0)
+out_bh <- cbind(out_bh, pvalsig)
+head(out_bh)
+
+colnames(out_bh) <- c("N","Mean","SD","T-Test P-Value (FDR Adjusted)","P-Value Significant? (FDR Adjustment) (1=Yes, 0=No)")
+row.names(out_bh) <- c("Question 13 Group 1",
+                    "Question 13 Group 2",
+                    "Question 14 Group 1",
+                    "Question 14 Group 2",
+                    "Question 15 Group 1",
+                    "Question 15 Group 2",
+                    "Question 16 Group 1",
+                    "Question 16 Group 2",
+                    "Question 17 Group 1",
+                    "Question 17 Group 2",
+                    "Question 18 Group 1",
+                    "Question 18 Group 2",
+                    "Question 19 Group 1",
+                    "Question 19 Group 2",
+                    "Question 20 Group 1",
+                    "Question 20 Group 2",
+                    "Question 21 Group 1",
+                    "Question 21 Group 2",
+                    "Question 22 Group 1",
+                    "Question 22 Group 2",
+                    "Question 23 Group 1",
+                    "Question 23 Group 2",
+                    "Question 24 Group 1",
+                    "Question 24 Group 2",
+                    "Question 25 Group 1",
+                    "Question 25 Group 2")
+
+out_bh$`T-Test P-Value (FDR Adjusted)`[is.na(out_bh$`T-Test P-Value (FDR Adjusted)`)] <- " "
+out_bh$`P-Value Significant? (FDR Adjustment) (1=Yes, 0=No)`[is.na(out_bh$`P-Value Significant? (FDR Adjustment) (1=Yes, 0=No)`)] <- " "
+
+kable(out_bh, digits=3)           
+        
+```
+
+
 ```{r, echo=FALSE}
 ddply(infile3, ~Q19c, summarize, n=length(EBPAS), mean=mean(EBPAS))
 ddply(infile3, ~Q22c, summarize, n=length(EBPAS), mean=mean(EBPAS))
 ddply(infile3, ~Q25c, summarize, n=length(EBPAS), mean=mean(EBPAS))
+ddply(infile3, ~Q14c, summarize, n=length(EBPAS), mean=mean(EBPAS))
+ddply(infile3, ~Q15c, summarize, n=length(EBPAS), mean=mean(EBPAS))
+ddply(infile3, ~Q20c, summarize, n=length(EBPAS), mean=mean(EBPAS))
 ```
-After correction for multiple testing, EBPAS is significantly associated with questions 19, 22, and 25.
+
+After Bonferroni correction for multiple testing, EBPAS is significantly associated with questions 19, 22, and 25. With FDR correction, EBPAS is additionally significantly associated with questions 14, 15, and 20.
 
 * On question 19, those who answered "not at all/not very/neither comfortable not uncomfortable" had a significantly lower EBPAS score than those who answered "comfortable or very comfortable" (P=<0.0001)
 * On question 22, those who answered "not at all/not very/neither comfortable not uncomfortable" had a significantly lower EBPAS score than those who answered "comfortable or very comfortable" (P=<0.0004)
 * On question 23, those who answered "not at all/not very/neither comfortable not uncomfortable" had a significantly lower EBPAS score than those who answered "comfortable or very comfortable" (P=<0.0004)
+* On question 14, those who answered "not at all/not very/neither comfortable not uncomfortable" had a significantly lower EBPAS score than those who answered "comfortable or very comfortable" (P=<0.04)
+* On question 14, those who answered "not at all/not very/neither comfortable not uncomfortable" had a significantly lower EBPAS score than those who answered "comfortable or very comfortable" (P=<0.02)
+* On question 20, those who answered "not at all/not very/neither comfortable not uncomfortable" had a significantly lower EBPAS score than those who answered "comfortable or very comfortable" (P=<0.04)
+
 
 ### Statistical Tests for four education questions
 
@@ -768,6 +921,7 @@ kable(out6,digits=6)
 * Those who answered question number 24 as either not at all comfortable, not very comfortable, or neither comfortable nor uncomfortable had a significantly lower agreement with the statement "I know whom to ask questions regarding genomic testing questions" than those who answered the question as comfortable or very comfortable.
 
 ##### T-Tests for association with Education question 9
+
 ```{r Q9 on Education, echo=FALSE, results='hold', fig.show='hide'}
 ### Q9
 
@@ -1061,7 +1215,7 @@ kwq9on27 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q27))
 
 # Q9 ~ Q28.2 ("Year of Medical School")
 # summary(aov(infile3$Q9 ~ as.factor(infile3$Q28.2)))
-# kwq9on28.2 <- kruskal.test(infile3$Q9 ~ as.factor(infile3$Q28.2))
+# kwq9on28.2 < kruskal.test(infile3$Q9 ~ as.factor(infile3$Q28.2))
 #TukeyHSD(aov(infile3$Q9 ~ as.factor(infile3$Q28.2)))
 
 # Q9 ~ Q28.2c (clinical grouping)
@@ -1626,3 +1780,124 @@ summary(model2)
 
 ```
 
+
+## Concatenated Question 9 Analysis
+
+We first wanted to do a collapsed t-test testing for an association between the openness/divergence components of EBPAS with question 9.
+
+### Collapsed t-test for EBPAS ~ Question 9
+
+```{r Collapsed T-test for EBPAS on question 9, echo=FALSE}
+
+#Q9 Collapsed t-test
+infile3$Q9c <- infile3$Q9
+# table(infile3$Q9)
+
+infile3$Q9c[infile3$Q9c==2] <- 1
+infile3$Q9c[infile3$Q9c==3] <- 1
+infile3$Q9c[infile3$Q9c==4] <- 2
+infile3$Q9c[infile3$Q9c==5] <- 2
+
+# table(infile3$Q9c)
+
+t.test(infile3$EBPAS ~ infile3$Q9c)
+CT9 <- t.test(infile3$EBPAS ~ infile3$Q9c) # Significant)
+s9 <- ddply(infile3, ~infile3$Q9c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+colnames(s9) <- c('Q9 Response Bin', 'N Responses', 'EBPAS Mean', 'EBPAS SD')
+kable(s9)
+
+```
+
+We see that there is a significant difference **(P=`r CT9$p.value`)** for the combined openness/divergence subsets of EBPAS depending upon how respondents answered question 9. 
+
+On this question, those who answered question 9 as "Not at all/To a slight extent/To a moderate extent" has significantly lower scores than those who answered question 9 as "To a great extent/To a very great extent".
+
+### Figure of Question 9 response frequences by Q28.2c groupings
+
+We want to examine how people answer Question 9 by their medical school year grouping (pre-clinical, pre-didactic, clinical). 
+
+```{r Figure of Question 9 response by Q28.2C groupings}
+
+##### Question 9 response, non-collapsed
+infile3$Q9f <- factor(infile3$Q9)
+levels(infile3$Q9f) <- c('Not at all','To a slight extent','To a moderate extent','To a great extent','To a very great extent')
+
+g1 <- ggplot(data=infile3, aes(factor(Q9f), fill=factor(Q28.2c)))
+g1 <- g1 + geom_bar(position="dodge", binwidth=0.25) 
+g1 <- g1 + ggtitle("Question 9 Reponse") + xlab("Response") + ylab('Frequency')
+g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Clinical','Pre-Didactic','Clinical'))
+g1;
+
+# ##### Question 9 response, collapsed
+# infile3$Q9cf <- factor(infile3$Q9c)
+# levels(infile3$Q9cf) <- c('Not at all/\nTo a slight extent/\nTo a moderate extent','To a great extent/\nTo a very great extent')
+# 
+# g1 <- ggplot(data=infile3, aes(factor(Q9cf), fill=factor(Q28.2c)))
+# g1 <- g1 + geom_bar(position="dodge", binwidth=0.25) 
+# g1 <- g1 + ggtitle("Question 9 Reponse") + xlab("Response") + ylab('Frequency')
+# g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Clinical','Pre-Didactic','Clinical'))
+# g1;
+
+```
+
+### Figure of Question 9 response frequences by Q30.1 groupings
+
+We want to examine how people answer Question 9 by their medical school year grouping (pre-clinical, pre-didactic, clinical). 
+
+```{r Figure of Question 9 response by Q30.1 groupings}
+
+# ##### Question 9 response, non-collapsed
+# infile3$Q9f <- factor(infile3$Q9)
+# levels(infile3$Q9f) <- c('Not at all','To a slight extent','To a moderate extent','To a great extent','To a very great extent')
+# 
+# g1 <- ggplot(data=infile3, aes(factor(Q9f), fill=factor(Q30.1)))
+# g1 <- g1 + geom_bar(position="dodge", binwidth=0.25) 
+# g1 <- g1 + ggtitle("Question 9 Reponse") + xlab("Response") + ylab('Frequency')
+# g1 <- g1 + scale_fill_discrete(name='Interest in Career\nInvolving Research', labels=c(,'No or Unsure'))
+# g1;
+# 
+
+
+##### Question 9 response, collapsed
+infile3$Q9cf <- factor(infile3$Q9c)
+levels(infile3$Q9cf) <- c('Not at all/\nTo a slight extent/\nTo a moderate extent','To a great extent/\nTo a very great extent')
+
+infile3$Q30.1.fNA <- addNA(as.factor(infile3$Q30.1))
+levels(infile3$Q30.1.fNA) <- c('No','Yes',"Unsure","Missing Response")
+
+g1 <- ggplot(data=infile3, aes(factor(Q9cf), fill=Q30.1.fNA))
+g1 <- g1 + geom_bar(position="dodge", binwidth=0.25) 
+g1 <- g1 + ggtitle("Question 9 Reponse") + xlab("Response") + ylab('Frequency')
+g1 <- g1 + scale_fill_discrete(name='Interest in career\nInvolving Research')
+g1;
+
+```
+
+## Genomic Comfort/Knowledge Figures
+
+### Figure of Genomic Knowledge on 28.2c
+
+```{r Figure about genomic comfort, warning=FALSE}
+
+g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=genomiccomfort) )
+g1 <- g1 + geom_boxplot() 
+g1 <- g1 + scale_x_discrete(labels=c('Pre-Clinical','Pre-Didactic','Clinical'))
+
+g1 <- g1 + ggtitle("Genomic Comfort Score") + xlab("Medical School Year Grouping") + ylab('Genomic Comfort Score')
+g1;
+
+```
+
+### Figure of Genomic Ability on 28.2c
+
+```{r Figure about genomic ability, warning=FALSE}
+
+g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=genomicknowledge) )
+g1 <- g1 + geom_boxplot() 
+g1 <- g1 + scale_x_discrete(labels=c('Pre-Clinical','Pre-Didactic','Clinical'))
+
+g1 <- g1 + ggtitle("Genomic Knowledge Score") + xlab("Medical School Year Grouping") + ylab('Genomic Knowledge Score')
+g1;
+
+```

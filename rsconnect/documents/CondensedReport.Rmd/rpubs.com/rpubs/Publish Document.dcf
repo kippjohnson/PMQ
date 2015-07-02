@@ -1,0 +1,7 @@
+name: Publish Document
+account: rpubs
+server: rpubs.com
+bundleId:
+        https://api.rpubs.com/api/v1/document/89822/c1ea1625490f4af9802d01a13e354baa
+url: http://rpubs.com/kipp/89822
+when: 1435589808.9855

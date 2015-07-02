@@ -1,0 +1,611 @@
+---
+title: "Personalized Genomics Survey, Condensed Report"
+author: "Kipp Johnson"
+date: "June 24, 2015"
+output: 
+  html_document: 
+    number_sections: yes
+    toc: yes
+---
+
+```{r multiplot, echo=FALSE}
+rm(list=ls()) #clear memory at start
+
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col)) }}}
+
+```
+
+# Introduction and data preparation
+
+If you are trying to replicate this report, ensure the following R packages are installed and loaded:
+
+```{r Call required libraries, error=FALSE,warning=FALSE,autodep=FALSE,collapse=TRUE,message=FALSE}
+library(knitr) # For report generation, not strictly necessary to run code
+library(psych)
+library(dunn.test)
+library(plyr) # for ddply and mutate function
+library(ggplot2)
+library(gridExtra) # multiplot for ggplot2
+library(reshape)
+library(scales) # Percentage plotting
+```
+
+R code for reading in the data from the Github Repository (/kippjohnson/PMQ):
+
+```{r Read in data from Github, results='hide'}
+tmp <- tempfile()
+download.file("https://raw.githubusercontent.com/kippjohnson/PMQ/master/SurveyResponses.csv", destfile=tmp, method="curl")
+infile <- read.csv(tmp,header=TRUE)
+```
+
+```{r Drop observations that are incomplete in EBPAS, echo=FALSE}
+infile2 <- mutate(infile, total1to12 = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
+infile3 <- infile2[-which(is.na(infile2$total1to12)),] #drop incompletes
+
+# Construct columsn with total scores for EBPAS subsections
+infile3 <- mutate(infile3, EBPAS = Q1+Q2+Q4+Q5+Q7+Q8+Q10+Q12)
+infile3 <- mutate(infile3, openness = Q1+Q7+Q10+Q12)
+infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
+infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
+
+```
+
+The responses are coded as follows:
+
+* Questions 1-12: 1=not at all, 2=to a slight extent, 3=to a moderate extent, 4=to a great extent, 5=to a very great extent
+* Question 13: 0= no, 1=yes
+* Question 14: 1=would not use, 2=would use, 3=did use
+* Question 15: 1=strongly disagree, 2=disagree, 3=uncertain, 4=agree, 5=strongly agree
+* Questions 16-25: 1=not at all, 2=not very comfortable, 3=neither comfortable nor uncomfortable, 4=comfortable, 5=very comfortable 
+* Question 26: 1=23 or younger, 2=24-25, 3=26 or older
+* Question 27: 0=male, 1=female
+* Question 28.1: 0=no, 1=yes
+* Question 28.2: 1=MS1, 2=MS2, 3=MS3, 4=MS4
+* Question 29.1: 0=no, 1=yes
+* Question 29.2: 1=MD/PhD, 2=MD/MPH, 3=MD/MSCR
+* Question 30.1: 0=no, 1=yes, 2=Don’t Know
+* Question 30.2: 1=Clinical, 2=Translational, 3=Basic Science, 4=Don’t Know (multiple answers were allowed here, e.g. clinical and translational = 12)
+
+```{r Creation of collapsed variables, echo=FALSE}
+##
+## Creation of collapsed variables
+##
+
+# Creation of collapsed variable for Q28.2c
+infile3$Q28.2c <- infile3$Q28.2
+infile3$Q28.2c[infile3$Q28.2c==4] <- 3
+clinical_grouping_table <- table(infile3$Q28.2c) 
+
+dim(infile3)
+dim(subset(infile3, Q28.2c!='NA'))
+
+infile3 <- subset(infile3, Q28.2c!='NA')
+infile3 <- subset(infile3, Q30.1!='NA')
+infile3 <- subset(infile3, Q20!='NA')
+infile3 <- subset(infile3, Q21!='NA')
+infile3 <- subset(infile3, Q22!='NA')
+infile3 <- subset(infile3, Q23!='NA')
+infile3 <- subset(infile3, Q24!='NA')
+infile3 <- subset(infile3, Q25!='NA')
+
+dim(infile3)
+```
+
+
+# Statistical Analysis and Figures
+
+## Figure Analagous to Poster Figure 1
+
+This is a histogram of responses to questions 1, 7, and 12.
+
+```{r Figure analagous to Figure 1 on Poster, echo=FALSE, warning=FALSE, fig.height=6, fig.width=10}
+#opts_chunk$set(dev = 'pdf')
+
+infile3$Q1c <- infile3$Q1
+infile3$Q1c[infile3$Q1c==2] <- 1
+infile3$Q1c[infile3$Q1c==3] <- 1
+infile3$Q1c[infile3$Q1c==4] <- 2
+infile3$Q1c[infile3$Q1c==5] <- 2
+
+infile3$Q7c <- infile3$Q7
+infile3$Q7c[infile3$Q7c==2] <- 1
+infile3$Q7c[infile3$Q7c==3] <- 1
+infile3$Q7c[infile3$Q7c==4] <- 2
+infile3$Q7c[infile3$Q7c==5] <- 2
+
+infile3$Q12c <- infile3$Q12
+infile3$Q12c[infile3$Q12c==0] <- 1
+infile3$Q12c[infile3$Q12c==2] <- 1
+infile3$Q12c[infile3$Q12c==3] <- 1
+infile3$Q12c[infile3$Q12c==4] <- 2
+infile3$Q12c[infile3$Q12c==5] <- 2
+
+tmp_infile <- infile3[,c('Q1c','Q7c','Q12c')];
+tmp_infile <- melt(tmp_infile);
+levels(tmp_infile$variable) <- c("Willingness to use \nnew types of therapy or\ninterventions to help patients ",
+                                 "Willingness to use \na patient’s genetic information\nto guide decisions in clinical practice ",
+                                 "Willingness to use \ngenome-guided prescribing even\nif more senior physicians are not " )
+
+#levels(tmp_infile$variable) <- factor(tmp_infile$variable, levels=rev(tmp_infile$variable))
+
+g1 <- ggplot(data=tmp_infile, aes(x=factor(variable), fill=(factor(value)))) + 
+      geom_histogram(aes(), position="stack") +
+      ggtitle("Medical students’ atitudes toward incorporating\ngenomic tools into clinical practice") + 
+      xlab("") + ylab('Frequency') +
+      scale_fill_discrete(name='', labels=c('\nNot At All/\nTo a Slight Extent/\nTo a Moderate Extent\n','\nTo a Great Extent/\nTo a Very Great Extent\n')) +
+      theme(axis.text.x = element_text(angle =0, hjust = 0.5)) + coord_flip() + guides(fill=guide_legend(reverse=TRUE))
+
+g1;
+
+```
+
+## EBPAS (Openness/Divergence) vs. Question 9
+
+```{r Collapsed T-test for EBPAS on question 9, echo=FALSE, fig.width=10}
+
+#Q9 Collapsed t-test
+infile3$Q9c <- infile3$Q9
+
+infile3$Q9c[infile3$Q9c==2] <- 1
+infile3$Q9c[infile3$Q9c==3] <- 1
+infile3$Q9c[infile3$Q9c==4] <- 2
+infile3$Q9c[infile3$Q9c==5] <- 2
+
+t.test(infile3$EBPAS ~ infile3$Q9c)
+s9 <- ddply(infile3, ~infile3$Q9c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS))
+
+colnames(s9) <- c('Q9 Response Bin', 'N Responses', 'EBPAS Mean', 'EBPAS SD')
+kable(s9)
+
+### Figure
+# infile3$Q9f <- factor(infile3$Q9)
+# levels(infile3$Q9f) <- c('Not at all','slight\nextent','moderate\nextent','great\nextent','very great\nextent')
+# 
+# g1 <- ggplot(data=infile3, aes(factor(Q9f), fill=factor(Q28.2c)))
+# g1 <- g1 + geom_bar(position="dodge", binwidth=0.25) 
+# g1 <- g1 + ggtitle("Question 9 Reponse") + xlab("Question Response") + ylab('Frequency')
+# g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()
+# g1;
+
+```
+
+There is a significant difference (P=0.0012) for the score in the combined openness/divergence subsets of EBPAS that depends upon upon how respondents answered question 9. 
+
+Those who answered question 9 as “Not at all/To a slight extent/To a moderate extent” have significantly lower scores than those who answered question 9 as “To a great extent/To a very great extent”.
+
+
+## Question 9 by medical school year grouping (Q28.2c)
+
+```{r Test for association between question 9 and question 28.2c, echo=FALSE, fig.width=10}
+kruskal.test(infile3$Q9 ~ as.factor(infile3$Q28.2c))
+
+dunn.test(x=infile3$Q9, g=as.factor(infile3$Q28.2c), method="bh", alpha=0.05,wrap=FALSE)
+ddply(infile3, ~Q28.2c, summarize, mean=mean(Q9, na.rm=TRUE), median=median(Q9), N=length(Q9))
+
+infile3$Q9f <- factor(infile3$Q9)
+levels(infile3$Q9f) <- c('Not at all','slight\nextent','moderate\nextent','great\nextent','very great\nextent')
+
+### Condensed Figure
+infile3$Q9cf <- factor(infile3$Q9c)
+levels(infile3$Q9cf) <- c('Not at all/\nSlight Extent/\nModerate Extent','Great Extent/\nVery Great Extent')
+
+g1 <- ggplot(data=infile3, aes(factor(Q9cf), fill=factor(Q28.2c)))
+g1 <- g1 + geom_bar(position="fill" )
+g1 <- g1 + ggtitle("Question 9 Reponse") + xlab("Question Response") + ylab('Percentage')
+g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
+g1 + scale_y_continuous(labels=percent)
+g1;
+
+g1 <- ggplot(data=infile3, aes(factor(Q28.2c), fill=factor(Q9cf)))
+g1 <- g1 + geom_bar(position="fill" )
+g1 <- g1 + ggtitle("Question 9 Reponse") + xlab("Question Response") + ylab('Percentage')
+g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
+g1 + scale_y_continuous(labels=percent)
+g1;
+
+grid.arrange(g1,g2)
+
+```
+
+There is a significant difference (p=0.02) on the question 9 response by medical school year grouping. Pre-didactic students were significantly more likely to agree with the statement “I think it is important to learn about personalized medicine” than were clinical students. Controlling for FDR, there was not a significant difference between pre-didactic vs. pre-clinical nor pre-clinical vs. clinical.
+
+## Question 9 by interest in research career (Q30.1)
+
+```{r Test for association between question 9 and question 30.1, echo=FALSE, fig.width=10}
+kruskal.test(infile3$Q9 ~ as.factor(infile3$Q30.1))
+
+dunn.test(x=infile3$Q9, g=as.factor(infile3$Q30.1), method="bh", alpha=0.05,wrap=FALSE)
+ddply(infile3, ~Q30.1, summarize, mean=mean(Q9, na.rm=TRUE), median=median(Q9), N=length(Q9))
+
+### Figure
+infile3$Q9cf <- factor(infile3$Q9c)
+levels(infile3$Q9cf) <- c('Not at all/\nTo a slight extent/To a moderate \nextent','To a great extent/\nTo a very great extent')
+
+
+infile3$Q30.1.fNA <- (as.factor(infile3$Q30.1))
+levels(infile3$Q30.1.fNA) <- c('No','Yes',"Unsure")
+
+new.levels<-c("No or Unsure","Yes","No or Unsure")
+infile3$Q30.1.fNA <- new.levels[infile3$Q30.1.fNA]
+
+# g1 <- ggplot(data=infile3, aes(factor(Q9cf), fill=Q30.1.fNA), aes(y=..count../sum(..count..))) + 
+#       geom_bar(position="fill", binwidth=0.25 )+ 
+#       #stat_bin(geom='text', aes(label='99%'), hjust=2 ) +
+#       ggtitle("Question 9 Reponse") + xlab("Response") + ylab('Frequency') + 
+#       scale_fill_discrete(name='Interest in career\nInvolving Research') + coord_flip() + 
+#       guides(fill=guide_legend(reverse=TRUE)) 
+# 
+# g1;
+
+g2 <- ggplot(data=infile3, aes(factor(Q30.1.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
+      geom_bar(position="fill", binwidth=0.25 )+ 
+      #stat_bin(geom='text', aes(label='99%'), hjust=2 ) +
+      ggtitle("Question 9 Reponse") + xlab("Response") + ylab('Frequency') + 
+      scale_fill_discrete(name='Interest in career\nInvolving Research') + coord_flip() + 
+      guides(fill=guide_legend(reverse=TRUE)) + scale_y_continuous(labels=percent)
+
+g2;
+
+```
+
+For educational question nine, those who do not want to have a research career (“0”) are significantly different from those who do want a research career, but not significantly different from those who are not sure if they want a research career. Those who do want a research career are significantly different from those who do not want a research career and those who are not sure if they want a research career.
+
+Students who want a research career are significantly more likely to agree with the statement “I think it is important to learn about personalized medicine” than both students who are not sure if they want a research career and students who do not want a research career. Students who do not want a research career are not significantly different in their agreement with this statement than those who do not know if they want a research career.  
+
+
+## Genomic comfort in knowledge (Q18-Q21) by medical school year grouping (Q28.2c)
+
+```{r Modifying levels of Q28.2c, echo=FALSE}
+levels(factor(infile3$Q28.2c))
+
+infile3$Q28.2cf <- factor(infile3$Q28.2c)
+levels(infile3$Q28.2cf) <- c('Pre-Clinical','Pre-didactic','Clinical')
+
+```
+
+```{r Test for association between group of Q18-21 and med. school year, echo=FALSE, warning=FALSE}
+infile3 <- mutate(infile3, genomicknowledge=Q18+Q19+Q20+Q21)
+
+anova(lm(infile3$genomicknowledge ~ as.factor(infile3$Q28.2c)))
+TukeyHSD(aov(infile3$genomicknowledge ~ as.factor(infile3$Q28.2c)))
+
+ddply(infile3, ~Q28.2c, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge))
+
+# g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=genomicknowledge) )
+# g1 <- g1 + geom_boxplot() 
+# g1 <- g1 + scale_x_discrete(labels=c('Pre-Didactic','Pre-Clinical','Clinical'))
+# g1 <- g1 + ggtitle("Genomic Knowledge Score") + xlab("Medical School Year Grouping") + ylab('Genomic Knowledge Score')
+# g1;
+
+g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=genomicknowledge) )
+g1 <- g1 + geom_boxplot() 
+g1 <- g1 + scale_x_discrete(labels=c('Pre-Didactic','Pre-Clinical','Clinical'))
+g1 <- g1 + ggtitle("Genomic Knowledge Score") + xlab("Medical School Year Grouping") + ylab('Genomic Knowledge Score')
+g1 <- g1 + coord_flip();
+g1;
+
+
+
+
+
+######################################
+### Question 18 Figure
+infile3$Q18c <- infile3$Q18
+infile3$Q18c[infile3$Q18c==2] <- 1
+infile3$Q18c[infile3$Q18c==3] <- 1
+infile3$Q18c[infile3$Q18c==4] <- 2
+infile3$Q18c[infile3$Q18c==5] <- 2
+
+infile3$Q18cf <- factor(infile3$Q18c)
+levels(infile3$Q18cf) <- c('Not at all/\nSlight Extent/\nModerate Extent','Great Extent/\nVery Great Extent')
+
+# g1 <- ggplot(data=infile3, aes(factor(Q18cf), fill=factor(Q28.2c)))
+# g1 <- g1 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g1 <- g1 + ggtitle("Question 18 Reponse") + xlab("Question Response") + ylab('Frequency')
+# g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
+# 
+# ### Question 18 Figure, y and x inverted
+# g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q18cf)))
+# g2 <- g2 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g2 <- g2 + ggtitle("Question 18 Reponse") + xlab("Medical School Year Grouping") + ylab('Frequency')
+# g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()
+# 
+# multiplot(g1,g2)
+
+g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q18cf)))
+g2 <- g2 + geom_bar(position="fill", aes(y=..count../sum(..count..)) )
+g2 <- g2 + ggtitle("Question 18 Reponse") + xlab("Medical School Year Grouping") + ylab('Percent')
+g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip() + scale_y_continuous(labels=percent)
+g2;
+
+
+######################################
+### Question 19 Figure
+infile3$Q19c <- infile3$Q19
+infile3$Q19c[infile3$Q19c==2] <- 1
+infile3$Q19c[infile3$Q19c==3] <- 1
+infile3$Q19c[infile3$Q19c==4] <- 2
+infile3$Q19c[infile3$Q19c==5] <- 2
+
+infile3$Q19cf <- factor(infile3$Q19c)
+levels(infile3$Q19cf) <- c('Not at all/\nSlight Extent/\nModerate Extent','Great Extent/\nVery Great Extent')
+# 
+# g1 <- ggplot(data=infile3, aes(factor(Q19cf), fill=factor(Q28.2c)))
+# g1 <- g1 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g1 <- g1 + ggtitle("Question 19 Reponse") + xlab("Question Response") + ylab('Frequency')
+# g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
+# g1;
+# 
+# ### Question 19 Figure, y and x inverted
+# g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q19cf)))
+# g2 <- g2 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g2 <- g2 + ggtitle("Question 19 Reponse") + xlab("Medical School Year Grouping") + ylab('Frequency')
+# g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=FALSE))
+# 
+# multiplot(g1,g2)
+
+g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q19cf)))
+g2 <- g2 + geom_bar(position="fill", aes(y=..count../sum(..count..)) )
+g2 <- g2 + ggtitle("Question 19 Reponse") + xlab("Medical School Year Grouping") + ylab('Percent')
+g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=FALSE)) + scale_y_continuous(labels=percent)
+g2;
+
+
+######################################
+### Question 20 Figure,
+infile3$Q20c <- infile3$Q20
+infile3$Q20c[infile3$Q20c==2] <- 1
+infile3$Q20c[infile3$Q20c==3] <- 1
+infile3$Q20c[infile3$Q20c==4] <- 2
+infile3$Q20c[infile3$Q20c==5] <- 2
+
+infile3$Q20cf <- factor(infile3$Q20c)
+levels(infile3$Q20cf) <- c('Not at all/\nSlight Extent/\nModerate Extent','Great Extent/\nVery Great Extent')
+
+# g1 <- ggplot(data=infile3, aes(factor(Q20cf), fill=factor(Q28.2c)))
+# g1 <- g1 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g1 <- g1 + ggtitle("Question 20 Reponse") + xlab("Question Response") + ylab('Frequency')
+# g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
+# 
+# ### Question 20 Figure, y and x inverted
+# g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q20cf)))
+# g2 <- g2 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g2 <- g2 + ggtitle("Question 20 Reponse") + xlab("Medical School Year Grouping") + ylab('Frequency')
+# g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=FALSE))
+# 
+# multiplot(g1,g2)
+
+g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q20cf)))
+g2 <- g2 + geom_bar(position="fill", aes(y=..count../sum(..count..)) )
+g2 <- g2 + ggtitle("Question 20 Reponse") + xlab("Medical School Year Grouping") + ylab('Percent')
+g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=FALSE)) + scale_y_continuous(labels=percent)
+g2;
+
+
+######################################
+### Question 21 Figure
+infile3$Q21c <- infile3$Q21
+infile3$Q21c[infile3$Q21c==2] <- 1
+infile3$Q21c[infile3$Q21c==3] <- 1
+infile3$Q21c[infile3$Q21c==4] <- 2
+infile3$Q21c[infile3$Q21c==5] <- 2
+
+infile3$Q21cf <- factor(infile3$Q21c)
+levels(infile3$Q21cf) <- c('Not at all/\nSlight Extent/\nModerate Extent','Great Extent/\nVery Great Extent')
+
+# g1 <- ggplot(data=infile3, aes(factor(Q21cf), fill=factor(Q28.2c)))
+# g1 <- g1 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g1 <- g1 + ggtitle("Question 21 Reponse") + xlab("Question Response") + ylab('Frequency')
+# g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
+# 
+# ### Question 21 Figure, y and x inverted
+# g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q21cf)))
+# g2 <- g2 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g2 <- g2 + ggtitle("Question 21 Reponse") + xlab("Medical School Year Grouping") + ylab('Frequency')
+# g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=FALSE))
+# 
+# multiplot(g1,g2)
+
+g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q21cf)))
+g2 <- g2 + geom_bar(position="fill", aes(y=..count../sum(..count..)) )
+g2 <- g2 + ggtitle("Question 21 Reponse") + xlab("Medical School Year Grouping") + ylab('Percent')
+g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=FALSE)) + scale_y_continuous(labels=percent)
+g2;
+
+```
+
+Pre-clinical students had a significantly lower mean score on questions 18-21 (9.72) than either pre-clinical or clinical students (means=12.79 and 13.16, p<0.00004 and P<0.00001), respectively. There was not a significant difference between the scores for pre-clinical and clinical students.
+
+## Genomic comfort in ability (Q22-Q25) by medical school year grouping (Q28.2c)
+
+```{r Test for association between group of Q22-25 and med. school year, echo=FALSE, warning=FALSE}
+
+infile3 <- mutate(infile3, genomiccomfort=Q22+Q23+Q24+Q25)
+
+anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q28.2c)))
+TukeyHSD(aov(infile3$genomiccomfort ~ as.factor(infile3$Q28.2c)))
+
+ddply(infile3, ~Q28.2c, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort))
+
+# g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=genomiccomfort) )
+# g1 <- g1 + geom_boxplot() 
+# g1 <- g1 + scale_x_discrete(labels=c('Pre-Didactic','Pre-Clinical','Clinical'))
+# g1 <- g1 + ggtitle("Genomic Ability Score") + xlab("Medical School Year Grouping") + ylab('Genomic Ability Score')
+# g1;
+
+g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=genomiccomfort) )
+g1 <- g1 + geom_boxplot() 
+g1 <- g1 + scale_x_discrete(labels=c('Pre-Didactic','Pre-Clinical','Clinical'))
+g1 <- g1 + ggtitle("Genomic Ability Score") + xlab("Medical School Year Grouping") + ylab('Genomic Ability Score')
+g1 <- g1 + coord_flip();
+g1;
+
+
+
+
+######################################
+### Question 22 Figure
+infile3$Q22c <- infile3$Q22
+infile3$Q22c[infile3$Q22c==2] <- 1
+infile3$Q22c[infile3$Q22c==3] <- 1
+infile3$Q22c[infile3$Q22c==4] <- 2
+infile3$Q22c[infile3$Q22c==5] <- 2
+
+infile3$Q22cf <- factor(infile3$Q22c)
+levels(infile3$Q22cf) <- c('Not at all/\nSlight Extent/\nModerate Extent','Great Extent/\nVery Great Extent')
+
+# g1 <- ggplot(data=infile3, aes(factor(Q22cf), fill=factor(Q28.2c)))
+# g1 <- g1 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g1 <- g1 + ggtitle("Question 22 Reponse") + xlab("Question Response") + ylab('Frequency')
+# g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
+# 
+# ### Question 22 Figure, y and x inverted
+# g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q22cf)))
+# g2 <- g2 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g2 <- g2 + ggtitle("Question 22 Reponse") + xlab("Medical School Year Grouping") + ylab('Frequency')
+# g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()
+# g2;
+# 
+# multiplot(g1,g2)
+
+
+g2 <- ggplot(data=infile3, aes(x=factor(Q28.2cf), fill=factor(Q22cf)))
+g2 <- g2 + geom_bar(position="fill")
+g2 <- g2 + ggtitle("Question 22 Reponse") + xlab("Medical School Year Grouping") + ylab('Percentage')
+g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip() + scale_y_continuous(labels=percent)
+g2;
+
+
+######################################
+### Question 23 Figure
+infile3$Q23c <- infile3$Q23
+infile3$Q23c[infile3$Q23c==2] <- 1
+infile3$Q23c[infile3$Q23c==3] <- 1
+infile3$Q23c[infile3$Q23c==4] <- 2
+infile3$Q23c[infile3$Q23c==5] <- 2
+
+infile3$Q23cf <- factor(infile3$Q23c)
+levels(infile3$Q23cf) <- c('Not at all/\nSlight Extent/\nModerate Extent','Great Extent/\nVery Great Extent')
+
+# g1 <- ggplot(data=infile3, aes(factor(Q23cf), fill=factor(Q28.2c)))
+# g1 <- g1 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g1 <- g1 + ggtitle("Question 23 Reponse") + xlab("Question Response") + ylab('Frequency')
+# g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
+# 
+# ### Question 23 Figure, y and x inverted
+# g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q23cf)))
+# g2 <- g2 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g2 <- g2 + ggtitle("Question 23 Reponse") + xlab("Medical School Year Grouping") + ylab('Frequency')
+# g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=FALSE))
+# 
+# multiplot(g1,g2)
+
+g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q23cf)))
+g2 <- g2 + geom_bar(position="fill", aes(y=..count../sum(..count..)) )
+g2 <- g2 + ggtitle("Question 23 Reponse") + xlab("Medical School Year Grouping") + ylab('Percentage')
+g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=FALSE)) + scale_y_continuous(labels=percent)
+g2;
+
+
+######################################
+### Question 24 Figure
+infile3$Q24c <- infile3$Q24
+infile3$Q24c[infile3$Q24c==2] <- 1
+infile3$Q24c[infile3$Q24c==3] <- 1
+infile3$Q24c[infile3$Q24c==4] <- 2
+infile3$Q24c[infile3$Q24c==5] <- 2
+
+infile3$Q24cf <- factor(infile3$Q24c)
+levels(infile3$Q24cf) <- c('Not at all/\nSlight Extent/\nModerate Extent','Great Extent/\nVery Great Extent')
+
+# g1 <- ggplot(data=infile3, aes(factor(Q24cf), fill=factor(Q28.2c)))
+# g1 <- g1 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g1 <- g1 + ggtitle("Question 24 Reponse") + xlab("Question Response") + ylab('Frequency')
+# g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
+# 
+# ### Question 24 Figure, y and x inverted
+# g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q24cf)))
+# g2 <- g2 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g2 <- g2 + ggtitle("Question 24 Reponse") + xlab("Medical School Year Grouping") + ylab('Frequency')
+# g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=FALSE))
+
+# multiplot(g1,g2)
+
+g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q24cf)))
+g2 <- g2 + geom_bar(position="fill", aes(y=..count../sum(..count..)) )
+g2 <- g2 + ggtitle("Question 24 Reponse") + xlab("Medical School Year Grouping") + ylab('Percentage')
+g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=FALSE)) + scale_y_continuous(labels=percent)
+g2;
+
+
+######################################
+### Question 25 Figure
+infile3$Q25c <- infile3$Q25
+infile3$Q25c[infile3$Q25c==2] <- 1
+infile3$Q25c[infile3$Q25c==3] <- 1
+infile3$Q25c[infile3$Q25c==4] <- 2
+infile3$Q25c[infile3$Q25c==5] <- 2
+
+infile3$Q25cf <- factor(infile3$Q25c)
+levels(infile3$Q25cf) <- c('Not at all/\nSlight Extent/\nModerate Extent','Great Extent/\nVery Great Extent')
+
+# g1 <- ggplot(data=infile3, aes(factor(Q25cf), fill=factor(Q28.2c)))
+# g1 <- g1 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g1 <- g1 + ggtitle("Question 25 Reponse") + xlab("Question Response") + ylab('Frequency')
+# g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
+# 
+# ### Question 24 Figure, y and x inverted
+# g2 <- ggplot(data=infile3, aes(factor(Q28.2cf), fill=factor(Q25cf)))
+# g2 <- g2 + geom_bar(position="stack", aes(y=..count../sum(..count..)) )
+# g2 <- g2 + ggtitle("Question 25 Reponse") + xlab("Medical School Year Grouping") + ylab('Frequency')
+# g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=FALSE))
+# 
+# multiplot(g1,g2)
+
+tmpfile <- ddply(infile3, .(Q28.2cf, Q25cf), transform, perc=length(Q25cf))
+tmpfile <- ddply(tmpfile, .(), transform, perc_tot= round(perc/length(Q25cf),2)*100)
+tmpfile$label <- paste0(tmpfile$perc_tot, "%")
+
+tmpfile = ddply(tmpfile, .(Q28.2cf, Q25cf), transform, pos = (cumsum(perc_tot/100) - 0.5 * (perc_tot/100)))
+
+g2 <- ggplot(data=tmpfile, aes(factor(Q28.2cf), fill=factor(Q25cf)))
+g2 <- g2 + geom_bar(position="fill")
+g2 <- g2 + ggtitle("Question 25 Reponse") + xlab("Medical School Year Grouping") + ylab('Percentage')
+g2 <- g2 + scale_fill_discrete(name='Question Response') + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + guides(fill=guide_legend(reverse=FALSE)) + scale_y_continuous(labels=percent) 
+g2;
+
+```
+
+Pre-didactic students had significantly lower genomic comfort scores (mean=7.02) than did either pre-clinical or clinical students (means 9.66 and 1-.61, p<0.006 and p<1e5 respectively). There was not a significant difference between pre-clinical or clinical students’ genomic comfort answers. 
+
