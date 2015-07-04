@@ -220,21 +220,23 @@ levels(infile3$Q9f) <- c('Not at all','slight\nextent','moderate\nextent','great
 infile3$Q9cf <- factor(infile3$Q9c)
 levels(infile3$Q9cf) <- c('Not at all/\nSlight Extent/\nModerate Extent','Great Extent/\nVery Great Extent')
 
-g1 <- ggplot(data=infile3, aes(factor(Q9cf), fill=factor(Q28.2c)))
-g1 <- g1 + geom_bar(position="fill" )
-g1 <- g1 + ggtitle("Question 9 Reponse") + xlab("Question Response") + ylab('Percentage')
-g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
-g1 + scale_y_continuous(labels=percent)
-g1;
+# g1 <- ggplot(data=infile3, aes(factor(Q9cf), fill=factor(Q28.2c)))
+# g1 <- g1 + geom_bar(position="fill" )
+# g1 <- g1 + ggtitle("Question 9 Reponse") + xlab("Question Response") + ylab('Percentage')
+# g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
+# g1 + scale_y_continuous(labels=percent)
+# g1;
 
-g1 <- ggplot(data=infile3, aes(factor(Q28.2c), fill=factor(Q9cf)))
-g1 <- g1 + geom_bar(position="fill" )
-g1 <- g1 + ggtitle("Question 9 Reponse") + xlab("Question Response") + ylab('Percentage')
-g1 <- g1 + scale_fill_discrete(name='Medical School\nYear Grouping', labels=c('Pre-Didactic','Pre-Clinical','Clinical')) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()+  guides(fill=guide_legend(reverse=TRUE))
-g1 + scale_y_continuous(labels=percent)
-g1;
+infile3$Q28.2.fNA <- (as.factor(infile3$Q28.2c))
+levels(infile3$Q28.2.fNA) <- c('Pre-Didactic','Pre-clinical',"Clinical")
 
-grid.arrange(g1,g2)
+g2 <- ggplot(data=infile3, aes(factor(Q28.2.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
+      geom_bar(position="fill", binwidth=0.25 )+ 
+      ggtitle("Question 9 Reponse") + xlab("Training Year") + ylab('Percent') + 
+      scale_fill_discrete(name='Question Response') + coord_flip() + 
+      guides(fill=guide_legend(reverse=TRUE)) + scale_y_continuous(labels=percent)
+
+g2;
 
 ```
 
