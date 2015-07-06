@@ -8,6 +8,7 @@ output:
     toc: yes
 ---
 
+
 ```{r multiplot, echo=FALSE}
 rm(list=ls()) #clear memory at start
 
@@ -78,7 +79,6 @@ infile3 <- mutate(infile3, EBPAS = Q1+Q2+Q4+Q5+Q7+Q8+Q10+Q12)
 infile3 <- mutate(infile3, openness = Q1+Q7+Q10+Q12)
 infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
 infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
-
 ```
 
 The responses are coded as follows:
@@ -129,7 +129,7 @@ dim(infile3)
 
 This is a histogram of responses to questions 1, 7, and 12.
 
-```{r Figure analagous to Figure 1 on Poster, echo=FALSE, warning=FALSE, fig.height=6, fig.width=10}
+```{r Openness questions, echo=FALSE, warning=FALSE, fig.height=6, fig.width=10}
 #opts_chunk$set(dev = 'pdf')
 
 infile3$Q1c <- infile3$Q1
@@ -144,6 +144,12 @@ infile3$Q7c[infile3$Q7c==3] <- 1
 infile3$Q7c[infile3$Q7c==4] <- 2
 infile3$Q7c[infile3$Q7c==5] <- 2
 
+infile3$Q10c <- infile3$Q10
+infile3$Q10c[infile3$Q10c==2] <- 1
+infile3$Q10c[infile3$Q10c==3] <- 1
+infile3$Q10c[infile3$Q10c==4] <- 2
+infile3$Q10c[infile3$Q10c==5] <- 2
+
 infile3$Q12c <- infile3$Q12
 infile3$Q12c[infile3$Q12c==0] <- 1
 infile3$Q12c[infile3$Q12c==2] <- 1
@@ -151,23 +157,73 @@ infile3$Q12c[infile3$Q12c==3] <- 1
 infile3$Q12c[infile3$Q12c==4] <- 2
 infile3$Q12c[infile3$Q12c==5] <- 2
 
-tmp_infile <- infile3[,c('Q1c','Q7c','Q12c')];
+tmp_infile <- infile3[,c('Q1c','Q7c','Q10c','Q12c')];
 tmp_infile <- melt(tmp_infile);
-levels(tmp_infile$variable) <- c("Willingness to use \nnew types of therapy or\ninterventions to help patients ",
-                                 "Willingness to use \na patient’s genetic information\nto guide decisions in clinical practice ",
-                                 "Willingness to use \ngenome-guided prescribing even\nif more senior physicians are not " )
+
+levels(tmp_infile$variable) <- c("Willingness to use\nnew types of therapy or\ninterventions to help patients",
+                                 "Willingness to use\na patient’s genetic information\nto guide decisions in clinical practice",
+                                 "Willingness to use\ngenome-guided prescribing tools\nthat are developed by researchers",
+                                 "Willingness to use\ngenome-guided prescribing even\nif more senior physicians are not" )
 
 #levels(tmp_infile$variable) <- factor(tmp_infile$variable, levels=rev(tmp_infile$variable))
 
 g1 <- ggplot(data=tmp_infile, aes(x=factor(variable), fill=(factor(value)))) + 
       geom_histogram(aes(), position="stack") +
-      ggtitle("Medical students’ atitudes toward incorporating\ngenomic tools into clinical practice") + 
+      #ggtitle("Medical student openness toward incorporating\ngenomic tools into clinical practice") + 
+      xlab("") + ylab('Frequency') +
+      scale_fill_discrete(name='', labels=c('\nNot At All/\nTo a Slight Extent/\nTo a Moderate Extent\n','\nTo a Great Extent/\nTo a Very Great Extent\n')) +
+      theme(axis.text.x = element_text(angle =0, hjust = 0.5)) + coord_flip() + guides(fill=guide_legend(reverse=TRUE)) 
+
+g1;
+
+```
+
+```{r Openness questions figure, echo=FALSE, warning=FALSE, fig.height=6, fig.width=10}
+infile3$Q2c <- infile3$Q2
+infile3$Q2c[infile3$Q2c==2] <- 1
+infile3$Q2c[infile3$Q2c==3] <- 1
+infile3$Q2c[infile3$Q2c==4] <- 2
+infile3$Q2c[infile3$Q2c==5] <- 2
+
+infile3$Q4c <- infile3$Q4
+infile3$Q4c[infile3$Q4c==2] <- 1
+infile3$Q4c[infile3$Q4c==3] <- 1
+infile3$Q4c[infile3$Q4c==4] <- 2
+infile3$Q4c[infile3$Q4c==5] <- 2
+
+infile3$Q5c <- infile3$Q5
+infile3$Q5c[infile3$Q5c==2] <- 1
+infile3$Q5c[infile3$Q5c==3] <- 1
+infile3$Q5c[infile3$Q5c==4] <- 2
+infile3$Q5c[infile3$Q5c==5] <- 2
+
+infile3$Q8c <- infile3$Q8
+infile3$Q8c[infile3$Q8c==0] <- 1
+infile3$Q8c[infile3$Q8c==2] <- 1
+infile3$Q8c[infile3$Q8c==3] <- 1
+infile3$Q8c[infile3$Q8c==4] <- 2
+infile3$Q8c[infile3$Q8c==5] <- 2
+
+tmp_infile <- infile3[,c('Q2c','Q4c','Q5c','Q8c')];
+tmp_infile <- melt(tmp_infile);
+
+levels(tmp_infile$variable) <- c("Clinical experience is more\nimportant than using a patient’s genetic\ninformation to make decisions ",
+                                 "I would not be willing to prescribe\ndifferent medications or doses of medications\nbased on a patient’s genetic information ",
+                                 "Clinicians know better than academic\n researchers how to treat patients ",
+                                 "Research-based genome-guided\nprescribing tools are not clinically useful " )
+
+#levels(tmp_infile$variable) <- factor(tmp_infile$variable, levels=rev(tmp_infile$variable))
+
+g2 <- ggplot(data=tmp_infile, aes(x=factor(variable), fill=(factor(value)))) + 
+      geom_histogram(aes(), position="stack") +
+      #ggtitle("Medical student openness toward incorporating\ngenomic tools into clinical practice") + 
       xlab("") + ylab('Frequency') +
       scale_fill_discrete(name='', labels=c('\nNot At All/\nTo a Slight Extent/\nTo a Moderate Extent\n','\nTo a Great Extent/\nTo a Very Great Extent\n')) +
       theme(axis.text.x = element_text(angle =0, hjust = 0.5)) + coord_flip() + guides(fill=guide_legend(reverse=TRUE))
 
-g1;
+g2;
 
+#grid.arrange(g1, g2, ncol=2)
 ```
 
 ## EBPAS (Openness/Divergence) vs. Question 9
@@ -286,6 +342,48 @@ For educational question nine, those who do not want to have a research career (
 Students who want a research career are significantly more likely to agree with the statement “I think it is important to learn about personalized medicine” than both students who are not sure if they want a research career and students who do not want a research career. Students who do not want a research career are not significantly different in their agreement with this statement than those who do not know if they want a research career.  
 
 
+```{r Combined figures for 9 vs. 28.2, 29.1, 30.1, echo=FALSE}
+## 28.2
+infile3$Q28.2.fNA <- (as.factor(infile3$Q28.2c))
+levels(infile3$Q28.2.fNA) <- c('Pre-Didactic','Pre-clinical',"Clinical")
+
+g2 <- ggplot(data=infile3, aes(factor(Q28.2.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
+      geom_bar(position="fill", binwidth=0.25 )+ 
+      ggtitle("Question 9 Reponse") + xlab("Training Year") + ylab('Percent') + 
+      scale_fill_discrete(name='Question Response') + coord_flip() + 
+      guides(fill=guide_legend(reverse=TRUE)) + scale_y_continuous(labels=percent)
+
+g2;
+
+## 29.1
+infile3$Q29.1.fNA <- (as.factor(infile3$Q29.1))
+levels(infile3$Q29.1.fNA) <- c('Not in a\nDual Degree Program','In a\nDual Degree Program')
+
+g4 <- ggplot(data=infile3, aes(factor(Q29.1.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
+      geom_bar(position="fill", binwidth=0.25 )+ 
+      ggtitle("Question 9 Reponse") + xlab("") + ylab('Percent') + 
+      scale_fill_discrete(name='Question Response') + coord_flip() + 
+      guides(fill=guide_legend(reverse=TRUE)) + scale_y_continuous(labels=percent)
+
+g4;
+
+## 30.1
+infile3$Q30.1.fNA <- (as.factor(infile3$Q30.1))
+levels(infile3$Q30.1.fNA) <- c('No','Yes',"Unsure")
+new.levels<-c("No or Unsure","Yes","No or Unsure")
+infile3$Q30.1.fNA <- new.levels[infile3$Q30.1.fNA]
+
+g3 <- ggplot(data=infile3, aes(factor(Q30.1.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
+      geom_bar(position="fill", binwidth=0.25 )+ 
+      #stat_bin(geom='text', aes(label='99%'), hjust=2 ) +
+      ggtitle("Question 9 Reponse") + xlab("Response") + ylab('Frequency') + 
+      scale_fill_discrete(name='Interest in career\nInvolving Research') + coord_flip() + 
+      guides(fill=guide_legend(reverse=TRUE)) + scale_y_continuous(labels=percent)
+
+g3;
+
+```
+
 ## Genomic comfort in knowledge (Q18-Q21) by medical school year grouping (Q28.2c)
 
 ```{r Modifying levels of Q28.2c, echo=FALSE}
@@ -313,7 +411,7 @@ ddply(infile3, ~Q28.2c, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=le
 g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=genomicknowledge) )
 g1 <- g1 + geom_boxplot() 
 g1 <- g1 + scale_x_discrete(labels=c('Pre-Didactic','Pre-Clinical','Clinical'))
-g1 <- g1 + ggtitle("Genomic Knowledge Score") + xlab("Medical School Year Grouping") + ylab('Genomic Knowledge Score')
+g1 <- g1 + ggtitle("Comfort in Genomic Testing Knowledge") + xlab("") + ylab('Cumulative Score')
 g1 <- g1 + coord_flip();
 g1;
 
@@ -469,11 +567,9 @@ ddply(infile3, ~Q28.2c, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=leng
 g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=genomiccomfort) )
 g1 <- g1 + geom_boxplot() 
 g1 <- g1 + scale_x_discrete(labels=c('Pre-Didactic','Pre-Clinical','Clinical'))
-g1 <- g1 + ggtitle("Genomic Ability Score") + xlab("Medical School Year Grouping") + ylab('Genomic Ability Score')
+g1 <- g1 + ggtitle("Comfort in Genomic Testing Ability") + xlab("") + ylab('Cumulative Score')
 g1 <- g1 + coord_flip();
 g1;
-
-
 
 
 ######################################
