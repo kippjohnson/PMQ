@@ -72,7 +72,8 @@ infile <- read.csv(tmp,header=TRUE)
 
 ```{r Drop observations that are incomplete in EBPAS, echo=FALSE}
 infile2 <- mutate(infile, total1to12 = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
-infile3 <- infile2[-which(is.na(infile2$total1to12)),] #drop incompletes
+infile3 <- infile2
+#infile3 <- infile2[-which(is.na(infile2$total1to12)),] #drop incompletes
 
 # Construct columsn with total scores for EBPAS subsections
 infile3 <- mutate(infile3, EBPAS = Q1+Q2+Q4+Q5+Q7+Q8+Q10+Q12)
@@ -87,7 +88,7 @@ The responses are coded as follows:
 * Question 13: 0= no, 1=yes
 * Question 14: 1=would not use, 2=would use, 3=did use
 * Question 15: 1=strongly disagree, 2=disagree, 3=uncertain, 4=agree, 5=strongly agree
-* Questions 16-25: 1=not at all, 2=not very comfortable, 3=neither comfortable nor uncomfortable, 4=comfortable, 5=very comfortable 
+* Questions 16-25: 1=not at all, 2=not very comfortable, 3=neither comfortable nor uncomfortable, 4=comfortable, 5=very comfortable
 * Question 26: 1=23 or younger, 2=24-25, 3=26 or older
 * Question 27: 0=male, 1=female
 * Question 28.1: 0=no, 1=yes
@@ -160,10 +161,10 @@ infile3$Q12c[infile3$Q12c==5] <- 2
 tmp_infile <- infile3[,c('Q1c','Q7c','Q10c','Q12c')];
 tmp_infile <- melt(tmp_infile);
 
-levels(tmp_infile$variable) <- c("Willingness to use\nnew types of therapy or\ninterventions to help patients",
-                                 "Willingness to use\na patient’s genetic information\nto guide decisions in clinical practice",
-                                 "Willingness to use\ngenome-guided prescribing tools\nthat are developed by researchers",
-                                 "Willingness to use\ngenome-guided prescribing even\nif more senior physicians are not" )
+levels(tmp_infile$variable) <- c("Willing to use\nnew types of therapy or\ninterventions to help patients",
+                                 "Willing to use\na patient’s genetic information\nto guide decisions in clinical practice",
+                                 "Willing to use\ngenome-guided prescribing tools\nthat are developed by researchers",
+                                 "Willing to use\ngenome-guided prescribing even\nif more senior physicians are not" )
 
 #levels(tmp_infile$variable) <- factor(tmp_infile$variable, levels=rev(tmp_infile$variable))
 
@@ -208,7 +209,7 @@ tmp_infile <- infile3[,c('Q2c','Q4c','Q5c','Q8c')];
 tmp_infile <- melt(tmp_infile);
 
 levels(tmp_infile$variable) <- c("Clinical experience is more\nimportant than using a patient’s genetic\ninformation to make decisions ",
-                                 "I would not be willing to prescribe\ndifferent medications or doses of medications\nbased on a patient’s genetic information ",
+                                 "Not willing to prescribe\ndifferent medications or doses of medications\nbased on a patient’s genetic information ",
                                  "Clinicians know better than academic\n researchers how to treat patients ",
                                  "Research-based genome-guided\nprescribing tools are not clinically useful " )
 
@@ -308,7 +309,7 @@ ddply(infile3, ~Q30.1, summarize, mean=mean(Q9, na.rm=TRUE), median=median(Q9), 
 
 ### Figure
 infile3$Q9cf <- factor(infile3$Q9c)
-levels(infile3$Q9cf) <- c('Not at all/\nTo a slight extent/To a moderate \nextent','To a great extent/\nTo a very great extent')
+levels(infile3$Q9cf) <- c('\nNot at all/\nTo a slight extent/\nTo a moderate extent\n','\nTo a great extent/\nTo a very great extent\n')
 
 
 infile3$Q30.1.fNA <- (as.factor(infile3$Q30.1))
@@ -345,27 +346,28 @@ Students who want a research career are significantly more likely to agree with 
 ```{r Combined figures for 9 vs. 28.2, 29.1, 30.1, echo=FALSE}
 ## 28.2
 infile3$Q28.2.fNA <- (as.factor(infile3$Q28.2c))
-levels(infile3$Q28.2.fNA) <- c('Pre-Didactic','Pre-clinical',"Clinical")
+levels(infile3$Q28.2.fNA) <- c('MS1','MS2',"MS3+")
 
 g2 <- ggplot(data=infile3, aes(factor(Q28.2.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
       geom_bar(position="fill", binwidth=0.25 )+ 
-      ggtitle("Question 9 Reponse") + xlab("Training Year") + ylab('Percent') + 
-      scale_fill_discrete(name='Question Response') + coord_flip() + 
+      xlab("Medical School Year") + ylab('Percent') + 
+      scale_fill_discrete(name='Response') + coord_flip() + 
       guides(fill=guide_legend(reverse=TRUE)) + scale_y_continuous(labels=percent)
 
 g2;
 
 ## 29.1
 infile3$Q29.1.fNA <- (as.factor(infile3$Q29.1))
-levels(infile3$Q29.1.fNA) <- c('Not in a\nDual Degree Program','In a\nDual Degree Program')
+infile3_naomit <- infile3[which(!is.na(infile3$Q29.1.fNA)) , ]
+levels(infile3_naomit$Q29.1.fNA) <- c('No','Yes')
 
-g4 <- ggplot(data=infile3, aes(factor(Q29.1.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
+g3 <- ggplot(data=infile3_naomit, aes(factor(Q29.1.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
       geom_bar(position="fill", binwidth=0.25 )+ 
-      ggtitle("Question 9 Reponse") + xlab("") + ylab('Percent') + 
-      scale_fill_discrete(name='Question Response') + coord_flip() + 
+      xlab("Enrolled in Dual Degree Program") + ylab('Percent') + 
+      scale_fill_discrete(name='Response') + coord_flip() + 
       guides(fill=guide_legend(reverse=TRUE)) + scale_y_continuous(labels=percent)
 
-g4;
+g3;
 
 ## 30.1
 infile3$Q30.1.fNA <- (as.factor(infile3$Q30.1))
@@ -373,14 +375,19 @@ levels(infile3$Q30.1.fNA) <- c('No','Yes',"Unsure")
 new.levels<-c("No or Unsure","Yes","No or Unsure")
 infile3$Q30.1.fNA <- new.levels[infile3$Q30.1.fNA]
 
-g3 <- ggplot(data=infile3, aes(factor(Q30.1.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
+g4 <- ggplot(data=infile3, aes(factor(Q30.1.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
       geom_bar(position="fill", binwidth=0.25 )+ 
       #stat_bin(geom='text', aes(label='99%'), hjust=2 ) +
-      ggtitle("Question 9 Reponse") + xlab("Response") + ylab('Frequency') + 
-      scale_fill_discrete(name='Interest in career\nInvolving Research') + coord_flip() + 
+      xlab("Interested in a\nResearch Career") + ylab('Percent') + 
+      scale_fill_discrete(name='Response') + coord_flip() + 
       guides(fill=guide_legend(reverse=TRUE)) + scale_y_continuous(labels=percent)
 
-g3;
+g4;
+
+
+# grid.arrange(g2,g3,g4, main='\nI think that it is important to learn about personalized medicine')
+
+#ggsave(filename="~/Dropbox/Medical Student PM Manuscript/Figures/Figure 1.png",width=12,height=9, g)
 
 ```
 
@@ -408,10 +415,12 @@ ddply(infile3, ~Q28.2c, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=le
 # g1 <- g1 + ggtitle("Genomic Knowledge Score") + xlab("Medical School Year Grouping") + ylab('Genomic Knowledge Score')
 # g1;
 
+levels(infile3$Q28.2.fNA) <- c('MS1','MS2',"MS3+")
+
 g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=genomicknowledge) )
 g1 <- g1 + geom_boxplot() 
-g1 <- g1 + scale_x_discrete(labels=c('Pre-Didactic','Pre-Clinical','Clinical'))
-g1 <- g1 + ggtitle("Comfort in Genomic Testing Knowledge") + xlab("") + ylab('Cumulative Score')
+g1 <- g1 + scale_x_discrete(labels=c('MS1','MS2','MS3+'))
+g1 <- g1 + ggtitle("Perceived knowledge of genomic testing concepts") + xlab("") + ylab('Cumulative Score')
 g1 <- g1 + coord_flip();
 g1;
 
@@ -566,8 +575,8 @@ ddply(infile3, ~Q28.2c, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=leng
 
 g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=genomiccomfort) )
 g1 <- g1 + geom_boxplot() 
-g1 <- g1 + scale_x_discrete(labels=c('Pre-Didactic','Pre-Clinical','Clinical'))
-g1 <- g1 + ggtitle("Comfort in Genomic Testing Ability") + xlab("") + ylab('Cumulative Score')
+g1 <- g1 + scale_x_discrete(labels=c('MS1','MS2','MS3+'))
+g1 <- g1 + ggtitle("Perceived ability to apply genomics to clinical care") + xlab("") + ylab('Cumulative Score')
 g1 <- g1 + coord_flip();
 g1;
 
@@ -707,3 +716,64 @@ g2;
 
 Pre-didactic students had significantly lower genomic comfort scores (mean=7.02) than did either pre-clinical or clinical students (means 9.66 and 1-.61, p<0.006 and p<1e5 respectively). There was not a significant difference between pre-clinical or clinical students’ genomic comfort answers. 
 
+
+
+```{r Random paper statistics}
+# respondent ages
+prop.table(table(infile3$Q26))
+
+# Question 1 collapsed categories
+infile3$Q1c <- infile3$Q1
+infile3$Q1c[infile3$Q1c==2] <- 1
+infile3$Q1c[infile3$Q1c==3] <- 1
+infile3$Q1c[infile3$Q1c==4] <- 2
+infile3$Q1c[infile3$Q1c==5] <- 2
+prop.table(table(infile3$Q1c))
+
+# Question 7 collapsed categories
+infile3$Q7c <- infile3$Q7
+infile3$Q7c[infile3$Q7c==2] <- 1
+infile3$Q7c[infile3$Q7c==3] <- 1
+infile3$Q7c[infile3$Q7c==4] <- 2
+infile3$Q7c[infile3$Q7c==5] <- 2
+prop.table(table(infile3$Q7c))
+
+# Question 12 collapsed categories
+infile3$Q12c <- infile3$Q12
+infile3$Q12c[infile3$Q12c==2] <- 1
+infile3$Q12c[infile3$Q12c==3] <- 1
+infile3$Q12c[infile3$Q12c==4] <- 2
+infile3$Q12c[infile3$Q12c==5] <- 2
+prop.table(table(infile3$Q12c))
+
+# Question 9 collapsed categories
+infile3$Q9c <- infile3$Q9
+infile3$Q9c[infile3$Q9c==2] <- 1
+infile3$Q9c[infile3$Q9c==3] <- 1
+infile3$Q9c[infile3$Q9c==4] <- 2
+infile3$Q9c[infile3$Q9c==5] <- 2
+prop.table(table(infile3$Q9c))
+
+```
+
+```{r summary statistics for knowledge/ability}
+mean(infile3$genomicknowledge)
+mean(infile3$genomiccomfort)
+
+sd(infile3$genomicknowledge)
+sd(infile3$genomiccomfort)
+
+range(infile3$genomicknowledge)
+range(infile3$genomiccomfort)
+
+```
+
+```{r EBPAS-GII Plot}
+g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=EBPAS) )
+g1 <- g1 + geom_boxplot() 
+g1 <- g1 + scale_x_discrete(labels=c('MS1','MS2','MS3+'))
+g1 <- g1 + ggtitle("EBPAS-GII Score") + xlab("") + ylab('Cumulative Score')
+g1 <- g1 + coord_flip();
+g1;
+
+```

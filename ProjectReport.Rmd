@@ -37,27 +37,27 @@ infile <- read.csv(tmp,header=TRUE)
 
 ## Survey Demographics Table
 
-```{r Demographics Table, echo=FALSE}
-nMales = table(infile$Q27)[[1]]
-nFemales = table(infile$Q27)[[2]]
-nNoSex = table(infile$Q27,exclude=NULL)[[3]]
-
-nMS1 = table(infile$Q28.2)[[1]]
-nMS2 = table(infile$Q28.2)[[2]]
-nMS3 = table(infile$Q28.2)[[3]]
-nMS4 = table(infile$Q28.2)[[4]]
-nMSNone = table(infile$Q28.2,exclude=NULL)[[5]]
-
-nDual = table(infile$Q29.1)[[1]]
-nResearch = table(infile$Q30.1)[[1]]
-
-demog <-  data.frame(c(nMales,nFemales,nNoSex,nMS1,nMS2,nMS3,nMS4,nMSNone,nDual,nResearch))
-colnames(demog) <- "Number of Students"
-row.names(demog) <- c("Male","Female","No Sex Given","MS1","MS2","MS3","MS4","No Year Given","Total with Research Interest","Total Dual Degree")
-
-demog <- mutate(demog, PercentTotal = demog[,1] / 212)
-
-kable(demog, digits=2,padding=0)
+```{r Demographics Table, echo=FALSE, eval=FALSE}
+# nMales = table(infile$Q27)[[1]]
+# nFemales = table(infile$Q27)[[2]]
+# nNoSex = table(infile$Q27,exclude=NULL)[[3]]
+# 
+# nMS1 = table(infile$Q28.2)[[1]]
+# nMS2 = table(infile$Q28.2)[[2]]
+# nMS3 = table(infile$Q28.2)[[3]]
+# nMS4 = table(infile$Q28.2)[[4]]
+# nMSNone = table(infile$Q28.2,exclude=NULL)[[5]]
+# 
+# nDual = table(infile$Q29.1)[[1]]
+# nResearch = table(infile$Q30.1)[[1]]
+# 
+# demog <-  data.frame(c(nMales,nFemales,nNoSex,nMS1,nMS2,nMS3,nMS4,nMSNone,nDual,nResearch))
+# colnames(demog) <- "Number of Students"
+# row.names(demog) <- c("Male","Female","No Sex Given","MS1","MS2","MS3","MS4","No Year Given","Total with Research Interest","Total Dual Degree")
+# 
+# demog <- mutate(demog, PercentTotal = demog[,1] / 212)
+# 
+# kable(demog, digits=2,padding=0)
 ```
 
 
@@ -113,12 +113,12 @@ divergence_corrected <- abs(infile3[,c("Q2","Q4","Q5","Q8")] - 6)
 
 EBPAS_alpha <- 0.78
 #EBPAS_alpha <- alpha(infile3[,c("Q1","Q2","Q4","Q5","Q7","Q8","Q10","Q12")])
-openness_alpha <- alpha(infile3[,c("Q1","Q7","Q10","Q12")])
+openness_alpha <- psych::alpha(infile3[,c("Q1","Q7","Q10","Q12")])
 #divergence_alpha <- alpha(infile3[,c("Q2","Q4","Q5","Q8")])
-divergence_alpha <- alpha(divergence_corrected)
-education_alpha <- alpha(infile3[,c("Q3","Q6","Q9","Q11")]) 
+divergence_alpha <- psych::alpha(divergence_corrected)
+education_alpha <- psych::alpha(infile3[,c("Q3","Q6","Q9","Q11")]) 
 
-opennessdivergencealpha <- alpha( data.frame(c( infile3[,c("Q1","Q7","Q10","Q12")], divergence_corrected) ))
+opennessdivergencealpha <- psych::alpha( data.frame(c( infile3[,c("Q1","Q7","Q10","Q12")], divergence_corrected) ))
 
 EBPASstats <- c(EBPASstats, EBPAS_alpha)
 #EBPASstats <- c(EBPASstats, EBPAS_alpha$total[[1]])
@@ -139,10 +139,10 @@ The Cronbach's alpha for the combined openness & divergence is `r opennessdiverg
 From the education questions 3, 6, 9, and 11, we can make four different possible subsets of three questions: 3, 6, 9; 3, 9, 11; 3, 6, 11; 6, 9, 11. Here, we compute the Cronbach's alpha for these possible subsets of questions.
 
 ```{r, echo=FALSE, warning=FALSE}
-subset369  <- alpha(infile3[,c("Q3","Q6","Q9")])$total[[1]] #unavoidable warning message...
-subset3911 <- alpha(infile3[,c("Q3","Q9","Q11")])$total[[1]]
-subset3611 <- alpha(infile3[,c("Q3","Q6","Q11")])$total[[1]]
-subset6911 <- alpha(infile3[,c("Q6","Q9","Q11")])$total[[1]]
+subset369  <- psych::alpha(infile3[,c("Q3","Q6","Q9")])$total[[1]] #unavoidable warning message...
+subset3911 <- psych::alpha(infile3[,c("Q3","Q9","Q11")])$total[[1]]
+subset3611 <- psych::alpha(infile3[,c("Q3","Q6","Q11")])$total[[1]]
+subset6911 <- psych::alpha(infile3[,c("Q6","Q9","Q11")])$total[[1]]
 
 subsettable <- t(data.frame(subset369, subset3911, subset3611, subset6911))
 colnames(subsettable) <- c("Alpha")
@@ -158,9 +158,9 @@ Questions 18-21 ask the subject "How comfortable are you in your knowledge about
 
 ```{r Calculation of Genomics Cronbach Alphas, echo=FALSE}
 
-knowledge_alpha <- alpha(infile3[,c("Q18","Q19","Q20","Q21")])
-ability_alpha <-   alpha(infile3[,c("Q22","Q23","Q24","Q25")])
-knowledge_ability_alpha <-   alpha(infile3[,c("Q18","Q19","Q20","Q21","Q22","Q23","Q24","Q25")])
+knowledge_alpha <- psych::alpha(infile3[,c("Q18","Q19","Q20","Q21")])
+ability_alpha <-   psych::alpha(infile3[,c("Q22","Q23","Q24","Q25")])
+knowledge_ability_alpha <- psych::alpha(infile3[,c("Q18","Q19","Q20","Q21","Q22","Q23","Q24","Q25")])
 
 outka <- data.frame(knowledge_alpha$total[[1]], ability_alpha$total[[1]], knowledge_ability_alpha$total[[1]])
 colnames(outka) <- c("Questions 18-21 Alpha", "Questions 22-25 Alpha", "Questions 18-25 (Combined) Alpha")
@@ -1055,23 +1055,41 @@ In the study, there are `r clinical_grouping_table[[1]]` pre-didactic students, 
 
 #### EBPAS ANOVAs
 
+```{r EBPAS summary statistics}
+ddply(infile3, ~infile3$Q26, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS), range=max(EBPAS)-min(EBPAS))
+ddply(infile3, ~infile3$Q27, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS), range=max(EBPAS)-min(EBPAS))
+ddply(infile3, ~infile3$Q28.2c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS), range=max(EBPAS)-min(EBPAS))
+ddply(infile3, ~infile3$Q29.1, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS), range=max(EBPAS)-min(EBPAS))
+ddply(infile3, ~infile3$Q29.2, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS), range=max(EBPAS)-min(EBPAS))
+
+
+infile3$Q30.1c <- infile3$Q30.1
+infile3$Q30.1c[infile3$Q30.1c==2] <- 0
+infile3$Q30.1c <- as.factor(infile3$Q30.1c)
+
+ddply(infile3, ~infile3$Q30.1c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS), range=max(EBPAS)-min(EBPAS))
+```
+
 ```{r EBPAS ANOVAs on q26, echo=FALSE, fig.show='hide'}
 
 # EBPAS ~ Q26
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q26)))
 boxplot(EBPAS ~ Q26, data=infile3)
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q26)))
 ```
 EBPAS not significantly associated wtih question 26 on ANOVA.
 
 ```{r EBPAS ANOVAs on q27, echo=FALSE}
 # EBPAS ~ Q27
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q27)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q27)))
 ```
 EBPAS not significantly associated with question 27 on ANOVA.
 
 ```{r EBPAS ANOVAs on q28.2c,echo=FALSE}
 # EBPAS ~ Q28.2c (clinical grouping)
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q28.2c)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q28.2c)))
 #boxplot(EBPAS ~ Q28.2c, data=infile3)
 ```
 EBPAS not significantly associated wtih question 28.2c on ANOVA.
@@ -1079,6 +1097,7 @@ EBPAS not significantly associated wtih question 28.2c on ANOVA.
 ```{r EBPAS ANOVAs on q29.1,echo=FALSE}
 # EBPAS ~ Q29.1 ("Are you in a dual degre program?")
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q29.1)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q29.1)))
 #boxplot(EBPAS ~ Q29.1, data=infile3)
 ```
 EBPAS not significantly associated wtih question 29.1 on ANOVA.
@@ -1086,6 +1105,7 @@ EBPAS not significantly associated wtih question 29.1 on ANOVA.
 ```{r EBPAS ANOVAs on q29.2,echo=FALSE}
 # EBPAS ~ Q29.2 ("If yes, which dual degree program")
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q29.2)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q29.2)))
 #boxplot(EBPAS ~ Q29.2, data=infile3)
 ```
 EBPAS not significantly associated wtih question 29.2 on ANOVA.
@@ -1093,13 +1113,15 @@ EBPAS not significantly associated wtih question 29.2 on ANOVA.
 ```{r EBPAS ANOVAs on q30.1,echo=FALSE}
 # EBPAS ~ Q30.1
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q30.1)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q30.1)))
 #boxplot(EBPAS ~ Q30.1, data=infile3)
 ```
 EBPAS not significantly associated wtih question 30.1 on ANOVA.
 
-```{r EBPAS ANOVAs on q230.2,echo=FALSE}
+```{r EBPAS ANOVAs on q30.2,echo=FALSE}
 # EBPAS ~ Q30.2
 summary(aov(infile3$EBPAS ~ as.factor(infile3$Q30.2)))
+TukeyHSD(aov(infile3$EBPAS ~ as.factor(infile3$Q30.2)))
 #boxplot(EBPAS ~ Q30.2, data=infile3)
 ```
 EBPAS not significantly associated wtih question 30.2 on ANOVA.
@@ -1120,7 +1142,7 @@ kwq3on26 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q26))
 # Q3 ~ Q27
 summary(aov(infile3$Q3 ~ as.factor(infile3$Q27)))
 kwq3on27 <- kruskal.test(infile3$Q3 ~ as.factor(infile3$Q27))
-#TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q27)))
+# TukeyHSD(aov(infile3$Q3 ~ as.factor(infile3$Q27)))
 
 # Q3 ~ Q28.2 ("Year of Medical School")
 # summary(aov(infile3$Q3 ~ as.factor(infile3$Q28.2)))
@@ -1480,14 +1502,37 @@ ddply(infile3, ~Q28.2c, summarize, mean=mean(Q11, na.rm=TRUE), median=median(Q11
 
 Pre-didactic students are significantly less likely to agree with the statement "My professors have encouraged the use of personalized medicine" then either pre-clinical or clinical students. Pre-clinical students are significantly MORE LIKELY to agree with the statement than either pre-clinical OR clinical students. Clinical students are signiciantly more likely to agree with the statement than pre-didactic students, but significantly less likely to agree with the statement than pre-clinical students.
 
+
+## Not dropping incomplete EBPAS responses for genomic question analyses
+
+```{r infile3 <- infile2}
+
+infile3 <- mutate(infile, total1to12 = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
+
+infile3$Q28.2c <- infile3$Q28.2
+infile3$Q28.2c[infile3$Q28.2c==4] <- 3
+clinical_grouping_table <- table(infile3$Q28.2c) 
+
+infile3$Q30.1c <- infile3$Q30.1
+infile3$Q30.1c[infile3$Q30.1c==2] <- 0
+infile3$Q30.1c <- as.factor(infile3$Q30.1c)
+
+infile3 <- mutate(infile3, EBPAS = Q1+Q2+Q4+Q5+Q7+Q8+Q10+Q12)
+infile3 <- mutate(infile3, openness = Q1+Q7+Q10+Q12)
+infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
+infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
+
+
+```
+
 ## Analysis for "Comfort in Knowledge about Genomic Testing"  (Questions 18-21)
 ```{r Genomic knowledge Question Analysis, echo=FALSE}
 
 infile3 <- mutate(infile3, genomicknowledge=Q18+Q19+Q20+Q21)
 
-par(mfrow=c(1,2))
-barplot(sort(infile3$genomicknowledge),xlab='Respondent',main="Genomic Knowledge Score",ylab='Score')
-hist(infile3$genomicknowledge,xlab="Score",breaks=11,main="Genomics Knowledge Score")
+#par(mfrow=c(1,2))
+#barplot(sort(infile3$genomicknowledge),xlab='Respondent',main="Genomic Knowledge Score",ylab='Score')
+#hist(infile3$genomicknowledge,xlab="Score",breaks=11,main="Genomics Knowledge Score")
 
 gen_26k <- anova(lm(infile3$genomicknowledge ~ as.factor(infile3$Q26)))
 gen_27k <- anova(lm(infile3$genomicknowledge ~ as.factor(infile3$Q27)))
@@ -1529,22 +1574,40 @@ gen_out_covark <- t(data.frame(
                    )
                 )
 
-colnames(gen_out_covark) <- c("P Value", "Significant (1=Yes, 0=No)")
+colnames(gen_out_covark) <- c("P Value", "Bonferroni Significant?")
 rownames(gen_out_covark) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
 
+gen_out_covark <- cbind(gen_out_covark, p.adjust(gen_out_covark[,1]), (p.adjust(gen_out_covark[,1])<0.05))
+
+colnames(gen_out_covark) <- c("P Value", "Bonferroni Significant?", "FDR P-value", "FDR Significant?")
+
 kable(gen_out_covark,caption="Genomic Knowledge Covariate ANOVA Analysis (P-Values)")
+
 ```
 
 ```{r, echo=FALSE}
-ddply(infile3, ~Q27, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge))
-ddply(infile3, ~Q28.2c, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge))
-ddply(infile3, ~Q29.2, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge))
+
+ddply(infile3, ~Q26, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge), SD=sd(genomicknowledge, na.rm=TRUE))
+
+ddply(infile3, ~Q27, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge), SD=sd(genomicknowledge, na.rm=TRUE))
+
+ddply(infile3, ~Q28.2c, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge), SD=sd(genomicknowledge, na.rm=TRUE))
+
+ddply(infile3, ~Q29.1, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge), SD=sd(genomicknowledge, na.rm=TRUE))
+
+ddply(infile3, ~Q29.2, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge), SD=sd(genomicknowledge, na.rm=TRUE))
+
+ddply(infile3, ~Q30.1c, summarize, mean=mean(genomicknowledge, na.rm=TRUE), N=length(genomicknowledge), SD=sd(genomicknowledge, na.rm=TRUE))
+
 ```
 
 ```{r Tukey-HSD for genomic knowledge, echo=FALSE}
+TukeyHSD(aov(infile3$genomicknowledge ~ as.factor(infile3$Q26)))
 TukeyHSD(aov(infile3$genomicknowledge ~ as.factor(infile3$Q27)))
 TukeyHSD(aov(infile3$genomicknowledge ~ as.factor(infile3$Q28.2c)))
+TukeyHSD(aov(infile3$genomicknowledge ~ as.factor(infile3$Q29.1)))
 TukeyHSD(aov(infile3$genomicknowledge ~ as.factor(infile3$Q29.2)))
+TukeyHSD(aov(infile3$genomicknowledge ~ as.factor(infile3$Q30.1c)))
 ```
 
 * Males had a significantly higher mean score (12.88) in the section of the survey assessing comfort in knowledge about genomic testing than females (11.08), p<0.0015
@@ -1566,7 +1629,7 @@ gen_27c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q27)))
 gen_28.2c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q28.2c)))
 gen_29.1c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q29.1)))
 gen_29.2c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q29.2)))
-gen_30.1c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q30.1)))
+gen_30.1c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q30.1c)))
 gen_30.2c <- anova(lm(infile3$genomiccomfort ~ as.factor(infile3$Q30.2)))
 
 # For this form of ANOVA, to access the P-Value, you unfortunately need to add [[5]][1] to the saved result.
@@ -1601,20 +1664,40 @@ gen_out_covarc <- t(data.frame(
                    )
                 )
 
-colnames(gen_out_covarc) <- c("P Value", "Significant (1=Yes, 0=No)")
+
+colnames(gen_out_covarc) <- c("P Value", "Bonferroni Significant?")
 rownames(gen_out_covarc) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
 
-kable(gen_out_covarc,caption="Genomic Ability Covariate ANOVA Analysis (P-Values)")
+gen_out_covarc <- cbind(gen_out_covarc, p.adjust(gen_out_covarc[,1]), (p.adjust(gen_out_covarc[,1])<0.05))
+
+colnames(gen_out_covarc) <- c("P Value", "Bonferroni Significant?", "FDR P-value", "FDR Significant?")
+
+kable(gen_out_covarc,caption="Genomic Knowledge Covariate ANOVA Analysis (P-Values)")
 ```
 
 ```{r, echo=FALSE}
-ddply(infile3, ~Q27, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort))
-ddply(infile3, ~Q28.2c, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort))
+ddply(infile3, ~Q26, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort), SD=sd(genomiccomfort, na.rm=TRUE))
+
+ddply(infile3, ~Q27, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort), SD=sd(genomiccomfort, na.rm=TRUE))
+
+ddply(infile3, ~Q28.2c, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort), SD=sd(genomiccomfort, na.rm=TRUE))
+
+ddply(infile3, ~Q29.1, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort), SD=sd(genomiccomfort, na.rm=TRUE))
+
+ddply(infile3, ~Q29.2, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort), SD=sd(genomiccomfort, na.rm=TRUE))
+
+ddply(infile3, ~Q30.1c, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort), SD=sd(genomiccomfort, na.rm=TRUE))
+
+ddply(infile3, ~Q30.1, summarize, mean=mean(genomiccomfort, na.rm=TRUE), N=length(genomiccomfort), SD=sd(genomiccomfort, na.rm=TRUE))
+
 ```
 
 ```{r Tukey-HSD for genomic comfort, echo=FALSE}
+TukeyHSD(aov(infile3$genomiccomfort ~ as.factor(infile3$Q26)))
 TukeyHSD(aov(infile3$genomiccomfort ~ as.factor(infile3$Q27)))
 TukeyHSD(aov(infile3$genomiccomfort ~ as.factor(infile3$Q28.2c)))
+TukeyHSD(aov(infile3$genomiccomfort ~ as.factor(infile3$Q29.1)))
+TukeyHSD(aov(infile3$genomiccomfort ~ as.factor(infile3$Q30.1c)))
 ```
 
 * Males had a significantly higher mean score (10.05) in the section of the survey assessing comfort in ability to do genomic testing than females (8.51), p<0.007.
@@ -1649,7 +1732,7 @@ gen_27 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q27)))
 gen_28.2 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q28.2c)))
 gen_29.1 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q29.1)))
 gen_29.2 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q29.2)))
-gen_30.1 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q30.1)))
+gen_30.1 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q30.1c)))
 gen_30.2 <- anova(lm(infile3$genomics ~ as.factor(infile3$Q30.2)))
 
 # For this form of ANOVA, to access the P-Value, you unfortunately need to add [[5]][1] to the saved result.
@@ -1688,6 +1771,9 @@ colnames(gen_out_covar) <- c("P Value", "Significant (1=Yes, 0=No)")
 rownames(gen_out_covar) <- c("Question 26","Question 27","Question 28.2","Question 29.1","Question 29.2","Question 30.1","Question 30.2")
 
 kable(gen_out_covar,caption="Genomics Covariate ANOVA Analysis (P-Values)")
+
+kable( t((t(p.adjust(gen_out_covar[,1],method="fdr"))) < 0.05 ), col.names=c('FDR P-Value Significant?'))
+
 ```
 
 ```{r, echo=FALSE}
@@ -1892,12 +1978,116 @@ g1;
 ### Figure of Genomic Ability on 28.2c
 
 ```{r Figure about genomic ability, warning=FALSE}
-
 g1 <- ggplot(data=infile3[!is.na(factor(infile3$Q28.2c)), ], aes(x=factor(Q28.2c), y=genomicknowledge) )
 g1 <- g1 + geom_boxplot() 
 g1 <- g1 + scale_x_discrete(labels=c('Pre-Clinical','Pre-Didactic','Clinical'))
-
 g1 <- g1 + ggtitle("Genomic Knowledge Score") + xlab("Medical School Year Grouping") + ylab('Genomic Knowledge Score')
 g1;
+```
+
+
+```{r Creation of Table 4}
+
+ddply(infile3, ~infile3$Q26, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS), range=max(EBPAS)-min(EBPAS))
+ddply(infile3, ~infile3$Q27, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS), range=max(EBPAS)-min(EBPAS))
+ddply(infile3, ~infile3$Q28.2c, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS), range=max(EBPAS)-min(EBPAS))
+ddply(infile3, ~infile3$Q29.1.f, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS), range=max(EBPAS)-min(EBPAS))
+ddply(infile3, ~infile3$Q30.1.f, summarize, N=length(EBPAS), mean=mean(EBPAS), SD=sd(EBPAS), range=max(EBPAS)-min(EBPAS))
+
+ddply(infile3, ~infile3$Q26, summarize, N=length(openness), mean=mean(openness), SD=sd(openness), range=max(openness)-min(openness))
+ddply(infile3, ~infile3$Q27, summarize, N=length(openness), mean=mean(openness), SD=sd(openness), range=max(openness)-min(openness))
+ddply(infile3, ~infile3$Q28.2c, summarize, N=length(openness), mean=mean(openness), SD=sd(openness), range=max(openness)-min(openness))
+ddply(infile3, ~infile3$Q29.1.f, summarize, N=length(openness), mean=mean(openness), SD=sd(openness), range=max(openness)-min(openness))
+ddply(infile3, ~infile3$Q30.1.f, summarize, N=length(openness), mean=mean(openness), SD=sd(openness), range=max(openness)-min(openness))
+
+ddply(infile3, ~infile3$Q26, summarize, N=length(divergence), mean=mean(divergence), SD=sd(divergence), range=max(divergence)-min(divergence))
+ddply(infile3, ~infile3$Q27, summarize, N=length(divergence), mean=mean(divergence), SD=sd(divergence),range=max(divergence)-min(divergence))
+ddply(infile3, ~infile3$Q28.2c, summarize, N=length(divergence), mean=mean(divergence), SD=sd(divergence),range=max(divergence)-min(divergence))
+ddply(infile3, ~infile3$Q29.1.f, summarize, N=length(divergence), mean=mean(divergence), SD=sd(divergence),range=max(divergence)-min(divergence))
+ddply(infile3, ~infile3$Q30.1.f, summarize, N=length(divergence), mean=mean(divergence), SD=sd(divergence),range=max(divergence)-min(divergence))
+
+
+
+### Comfort in genomic ability vs. Question 26
+ddply(infile3, ~infile3$Q26, summarize, N=length(genomiccomfort), mean=mean(genomiccomfort, na.rm = TRUE), SD=sd(genomiccomfort,na.rm = TRUE),range=max(genomiccomfort,na.rm=TRUE)-min(genomiccomfort,na.rm=TRUE))
+
+ddply(infile3, ~infile3$Q27, summarize, N=length(genomiccomfort), mean=mean(genomiccomfort, na.rm = TRUE), SD=sd(genomiccomfort,na.rm = TRUE),range=max(genomiccomfort,na.rm=TRUE)-min(genomiccomfort,na.rm=TRUE))
+
+ddply(infile3, ~infile3$Q28.2c, summarize, N=length(genomiccomfort), mean=mean(genomiccomfort, na.rm = TRUE), SD=sd(genomiccomfort,na.rm = TRUE),range=max(genomiccomfort,na.rm=TRUE)-min(genomiccomfort,na.rm=TRUE))
+
+ddply(infile3, ~infile3$Q29.1.f, summarize, N=length(genomiccomfort), mean=mean(genomiccomfort, na.rm = TRUE), SD=sd(genomiccomfort, na.rm = TRUE),range=max(genomiccomfort,na.rm=TRUE)-min(genomiccomfort,na.rm=TRUE))
+
+ddply(infile3, ~infile3$Q30.1.f, summarize, N=length(genomiccomfort), mean=mean(genomiccomfort, na.rm = TRUE), SD=sd(genomiccomfort, na.rm = TRUE),range=max(genomiccomfort,na.rm=TRUE)-min(genomiccomfort,na.rm=TRUE))
+
+
+### Comfort in genomic knowledge vs. Question 26
+ddply(infile3, ~infile3$Q26, summarize, N=length(genomicknowledge), mean=mean(genomicknowledge, na.rm = TRUE), SD=sd(genomicknowledge,na.rm = TRUE),range=max(genomicknowledge,na.rm=TRUE)-min(genomicknowledge,na.rm=TRUE))
+
+ddply(infile3, ~infile3$Q27, summarize, N=length(genomicknowledge), mean=mean(genomicknowledge, na.rm = TRUE), SD=sd(genomicknowledge,na.rm = TRUE),range=max(genomicknowledge,na.rm=TRUE)-min(genomicknowledge,na.rm=TRUE))
+
+ddply(infile3, ~infile3$Q28.2c, summarize, N=length(genomicknowledge), mean=mean(genomicknowledge, na.rm = TRUE), SD=sd(genomicknowledge,na.rm = TRUE),range=max(genomicknowledge,na.rm=TRUE)-min(genomicknowledge,na.rm=TRUE))
+
+ddply(infile3, ~infile3$Q29.1.f, summarize, N=length(genomicknowledge), mean=mean(genomicknowledge, na.rm = TRUE), SD=sd(genomicknowledge, na.rm = TRUE),range=max(genomicknowledge,na.rm=TRUE)-min(genomicknowledge,na.rm=TRUE))
+
+ddply(infile3, ~infile3$Q30.1.f, summarize, N=length(genomicknowledge), mean=mean(genomicknowledge, na.rm = TRUE), SD=sd(genomicknowledge, na.rm = TRUE),range=max(genomicknowledge,na.rm=TRUE)-min(genomicknowledge,na.rm=TRUE))
 
 ```
+
+```{r Infile 3 demographics table}
+sums <- function(somevector){
+  n <- length(somevector)
+  xbar <- mean(somevector, na.rm=TRUE)
+  s <- sd(somevector, na.rm=TRUE)
+  mn <- min(somevector, na.rm=TRUE)
+  mx <- max(somevector, na.rm=TRUE)
+  ran <- mx - mn
+
+  return(c(n, xbar, s, mn, mx, ran))
+}
+
+nMales = table(infile3$Q27)[[1]]
+nFemales = table(infile3$Q27)[[2]]
+nNoSex = table(infile3$Q27,exclude=NULL)[[3]]
+
+nMS1 = table(infile3$Q28.2)[[1]]
+nMS2 = table(infile3$Q28.2)[[2]]
+nMS3 = table(infile3$Q28.2)[[3]]
+nMS4 = table(infile3$Q28.2)[[4]]
+nMSNone = table(infile3$Q28.2,exclude=NULL)[[5]]
+
+nDual = 34 #table(infile3$Q29.1, exclude=NULL)[[2:3]]
+nResearch = table(infile3$Q30.1)[[1]]
+
+demog <-  data.frame(c(nMales,nFemales,nNoSex,nMS1,nMS2,nMS3,nMS4,nMSNone,nDual,nResearch))
+colnames(demog) <- "Number of Students"
+row.names(demog) <- c("Male","Female","No Sex Given","MS1","MS2","MS3","MS4","No Year Given","Total with Research Interest","Total Dual Degree")
+
+demog <- mutate(demog, PercentTotal = demog[,1] / 212)
+
+kable(demog, digits=2,padding=0)
+
+table(infile3$Q30.2)
+65+22+13+1 # n clinical
+21+22+2+13+1 # n translational
+6+2+13+1 # n basic
+
+EBPASstats <- sums(infile3$EBPAS)
+opennessstats <- sums(infile3$openness)
+divergencestats <- sums(infile3$divergence)
+educationstats <- sums(infile3$education)
+knowledgestats <- sums(infile3$genomicknowledge)
+comfortstats <- sums(infile3$genomiccomfort)
+
+EBPAStable <- t(data.frame(EBPASstats,educationstats, divergencestats, opennessstats, knowledgestats, comfortstats))
+colnames(EBPAStable)  <- c("N","Mean","SD","Min","Max","Range")
+rownames(EBPAStable) <- c("EBPAS", "education", "divergence","openness",'knowledge','comfort')
+
+kable(EBPAStable)
+
+knowledge_alpha <- psych::alpha(infile3[,c("Q18","Q19","Q20","Q21")])
+ability_alpha <-   psych::alpha(infile3[,c("Q22","Q23","Q24","Q25")])
+knowledge_alpha; ability_alpha
+
+
+```
+
