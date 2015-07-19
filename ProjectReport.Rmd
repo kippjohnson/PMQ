@@ -1490,10 +1490,16 @@ dunn.test(x=infile3$Q9, g=as.factor(infile3$Q30.1), method="bh", alpha=0.05,wrap
 ddply(infile3, ~Q30.1, summarize, mean=mean(Q9, na.rm=TRUE), median=median(Q9), N=length(Q9))
 ```
 
+```{r Post-Hoc Dunn Tests for significant KW Tests Q9, echo=FALSE}
+dunn.test(x=infile3$Q9, g=as.factor(infile3$Q28.2c), method="bh", alpha=0.05,wrap=FALSE)
+ddply(infile3, ~Q30.1, summarize, mean=mean(Q9, na.rm=TRUE), median=median(Q9), N=length(Q9))
+```
+
 For educational question nine, those who do not want to have a research career ("0") are significantly different from those who do want a research career, but not significantly different from those who are not sure if they want a research career. Those who do want a research career are significantly different from those who do not want a research career and those who are not sure if they want a research career.
 
 Students who want a research career are significantly more likely to agree with the statement "I think it is important to learn about personalized medicine" than both students who are not sure if they want a research career and students who do not want a research career. Students who do not want a research career are not significantly different in their agreement with this statement than those who do not know if they want a research career.
 
+## Question 11
 
 ```{r Post-Hoc Dunn Tests for significant KW Tests Q11, echo=FALSE}
 dunn.test(x=infile3$Q11, g=as.factor(infile3$Q28.2c), method="bh", alpha=0.05,wrap=FALSE)
@@ -1507,20 +1513,20 @@ Pre-didactic students are significantly less likely to agree with the statement 
 
 ```{r infile3 <- infile2}
 
-infile3 <- mutate(infile, total1to12 = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
-
-infile3$Q28.2c <- infile3$Q28.2
-infile3$Q28.2c[infile3$Q28.2c==4] <- 3
-clinical_grouping_table <- table(infile3$Q28.2c) 
-
-infile3$Q30.1c <- infile3$Q30.1
-infile3$Q30.1c[infile3$Q30.1c==2] <- 0
-infile3$Q30.1c <- as.factor(infile3$Q30.1c)
-
-infile3 <- mutate(infile3, EBPAS = Q1+Q2+Q4+Q5+Q7+Q8+Q10+Q12)
-infile3 <- mutate(infile3, openness = Q1+Q7+Q10+Q12)
-infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
-infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
+# infile3 <- mutate(infile, total1to12 = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
+# 
+# infile3$Q28.2c <- infile3$Q28.2
+# infile3$Q28.2c[infile3$Q28.2c==4] <- 3
+# clinical_grouping_table <- table(infile3$Q28.2c) 
+# 
+# infile3$Q30.1c <- infile3$Q30.1
+# infile3$Q30.1c[infile3$Q30.1c==2] <- 0
+# infile3$Q30.1c <- as.factor(infile3$Q30.1c)
+# 
+# infile3 <- mutate(infile3, EBPAS = Q1+Q2+Q4+Q5+Q7+Q8+Q10+Q12)
+# infile3 <- mutate(infile3, openness = Q1+Q7+Q10+Q12)
+# infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
+# infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
 
 
 ```
@@ -2090,4 +2096,55 @@ knowledge_alpha; ability_alpha
 
 
 ```
+
+
+```{r Table 5 construction}
+
+table(infile3$Q9c)
+
+infile3$Q3c <- infile3$Q3
+infile3$Q3c[infile3$Q3c==2] <- 1
+infile3$Q3c[infile3$Q3c==3] <- 1
+infile3$Q3c[infile3$Q3c==4] <- 2
+infile3$Q3c[infile3$Q3c==5] <- 2
+table(infile3$Q3c)
+
+infile3$Q6c <- infile3$Q6
+infile3$Q6c[infile3$Q6c==2] <- 1
+infile3$Q6c[infile3$Q6c==3] <- 1
+infile3$Q6c[infile3$Q6c==4] <- 2
+infile3$Q6c[infile3$Q6c==5] <- 2
+table(infile3$Q6c)
+
+infile3$Q11c <- infile3$Q11
+infile3$Q11c[infile3$Q11c==2] <- 1
+infile3$Q11c[infile3$Q11c==3] <- 1
+infile3$Q11c[infile3$Q11c==4] <- 2
+infile3$Q11c[infile3$Q11c==5] <- 2
+table(infile3$Q11c)
+
+ddply(infile3, ~infile3$Q28.2c, summarize, N1=length(which(Q9c==1)), N2=length(which(Q9c==2)) )
+
+ddply(infile3, ~infile3$Q28.2c, summarize, N1=length(which(Q3c==1)), N2=length(which(Q3c==2)) )
+
+ddply(infile3, ~infile3$Q28.2c, summarize, N1=length(which(Q6c==1)), N2=length(which(Q6c==2)) )
+
+ddply(infile3, ~infile3$Q28.2c, summarize, N1=length(which(Q11c==1)), N2=length(which(Q11c==2)) )
+
+```
+
+
+```{r Supplemental table 1 construction}
+
+ddply(infile3, ~infile3$Q13, summarize, N=length(EBPAS), mean=mean(EBPAS, na.rm = TRUE), SD=sd(EBPAS,na.rm = TRUE))
+ddply(infile3, ~infile3$Q14c, summarize, N=length(EBPAS), mean=mean(EBPAS, na.rm = TRUE), SD=sd(EBPAS,na.rm = TRUE))
+ddply(infile3, ~infile3$Q15c, summarize, N=length(EBPAS), mean=mean(EBPAS, na.rm = TRUE), SD=sd(EBPAS,na.rm = TRUE))
+ddply(infile3, ~infile3$Q16c, summarize, N=length(EBPAS), mean=mean(EBPAS, na.rm = TRUE), SD=sd(EBPAS,na.rm = TRUE))
+ddply(infile3, ~infile3$Q17c, summarize, N=length(EBPAS), mean=mean(EBPAS, na.rm = TRUE), SD=sd(EBPAS,na.rm = TRUE))
+
+
+
+```
+
+
 
