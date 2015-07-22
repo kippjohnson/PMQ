@@ -12,39 +12,6 @@ output:
 ```{r multiplot, echo=FALSE}
 rm(list=ls()) #clear memory at start
 
-
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-  library(grid)
-
-  # Make a list from the ... arguments and plotlist
-  plots <- c(list(...), plotlist)
-
-  numPlots = length(plots)
-
-  # If layout is NULL, then use 'cols' to determine layout
-  if (is.null(layout)) {
-    # Make the panel
-    # ncol: Number of columns of plots
-    # nrow: Number of rows needed, calculated from # of cols
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                    ncol = cols, nrow = ceiling(numPlots/cols))
-  }
-
- if (numPlots==1) {
-    print(plots[[1]])
-
-  } else {
-    # Set up the page
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-
-    # Make each plot, in the correct location
-    for (i in 1:numPlots) {
-      # Get the i,j matrix positions of the regions that contain this subplot
-      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row, layout.pos.col = matchidx$col)) }}}
-
 ```
 
 # Introduction and data preparation
@@ -57,6 +24,7 @@ library(psych)
 library(dunn.test)
 library(plyr) # for ddply and mutate function
 library(ggplot2)
+library(grid) # multiplot for ggplot2
 library(gridExtra) # multiplot for ggplot2
 library(reshape)
 library(scales) # Percentage plotting
@@ -68,6 +36,14 @@ R code for reading in the data from the Github Repository (/kippjohnson/PMQ):
 tmp <- tempfile()
 download.file("https://raw.githubusercontent.com/kippjohnson/PMQ/master/SurveyResponses.csv", destfile=tmp, method="curl")
 infile <- read.csv(tmp,header=TRUE)
+
+get_legend<-function(myggplot){
+  tmp <- ggplot_gtable(ggplot_build(myggplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
+
 ```
 
 ```{r Drop observations that are incomplete in EBPAS, echo=FALSE}
@@ -345,23 +321,26 @@ Students who want a research career are significantly more likely to agree with 
 
 ```{r Combined figures for 9 vs. 28.2, 29.1, 30.1, echo=FALSE}
 ## 28.2
-infile3$Q28.2.fNA <- (as.factor(infile3$Q28.2c))
-levels(infile3$Q28.2.fNA) <- c('MS1','MS2',"MS3+")
+infile3a <- infile3[!is.na(infile3$Q9),]
 
-g2 <- ggplot(data=infile3, aes(factor(Q28.2.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
+infile3a$Q28.2.fNA <- (as.factor(infile3a$Q28.2c))
+levels(infile3a$Q28.2.fNA) <- c('MS1','MS2',"MS3+")
+
+g2 <- ggplot(data=infile3a, aes(factor(Q28.2.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
       geom_bar(position="fill", binwidth=0.25 )+ 
       xlab("Medical School Year") + ylab('Percent') + 
       scale_fill_discrete(name='Response') + coord_flip() + 
       guides(fill=guide_legend(reverse=TRUE)) + scale_y_continuous(labels=percent)
+      #ggtitle("I think that it is important to learn about personalized medicine")
 
 g2;
 
 ## 29.1
-infile3$Q29.1.fNA <- (as.factor(infile3$Q29.1))
-infile3_naomit <- infile3[which(!is.na(infile3$Q29.1.fNA)) , ]
-levels(infile3_naomit$Q29.1.fNA) <- c('No','Yes')
+infile3a$Q29.1.fNA <- (as.factor(infile3a$Q29.1))
+infile3a_naomit <- infile3a[which(!is.na(infile3a$Q29.1.fNA)) , ]
+levels(infile3a_naomit$Q29.1.fNA) <- c('No','Yes')
 
-g3 <- ggplot(data=infile3_naomit, aes(factor(Q29.1.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
+g3 <- ggplot(data=infile3a_naomit, aes(factor(Q29.1.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
       geom_bar(position="fill", binwidth=0.25 )+ 
       xlab("Enrolled in Dual Degree Program") + ylab('Percent') + 
       scale_fill_discrete(name='Response') + coord_flip() + 
@@ -370,23 +349,115 @@ g3 <- ggplot(data=infile3_naomit, aes(factor(Q29.1.fNA), fill=Q9cf), aes(y=..cou
 g3;
 
 ## 30.1
-infile3$Q30.1.fNA <- (as.factor(infile3$Q30.1))
-levels(infile3$Q30.1.fNA) <- c('No','Yes',"Unsure")
-new.levels<-c("No or Unsure","Yes","No or Unsure")
-infile3$Q30.1.fNA <- new.levels[infile3$Q30.1.fNA]
+infile3a$Q30.1.fNA <- (as.factor(infile3a$Q30.1))
+levels(infile3a$Q30.1.fNA) <- c('No','Yes',"Unsure")
+new.levels<-c("No/\nUnsure","Yes","No/\nUnsure")
+infile3a$Q30.1.fNA <- new.levels[infile3a$Q30.1.fNA]
 
-g4 <- ggplot(data=infile3, aes(factor(Q30.1.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
+g4 <- ggplot(data=infile3a, aes(factor(Q30.1.fNA), fill=Q9cf), aes(y=..count../sum(..count..))) + 
       geom_bar(position="fill", binwidth=0.25 )+ 
       #stat_bin(geom='text', aes(label='99%'), hjust=2 ) +
-      xlab("Interested in a\nResearch Career") + ylab('Percent') + 
+      xlab("Interest in a Research Career") + ylab('Percent') + 
       scale_fill_discrete(name='Response') + coord_flip() + 
       guides(fill=guide_legend(reverse=TRUE)) + scale_y_continuous(labels=percent)
 
 g4;
 
+g5 <- ggplot(data=infile3a, aes(x=factor(Q9cf), y=EBPAS))
+g5 <- g5 + geom_boxplot(aes(fill=factor(Q9cf))) 
+g5 <- g5 + scale_x_discrete(labels=c('Not at all/\nTo a slight extent/\nTo a moderate extent','To a great extent\nTo a very great extent'))
+g5a <- g5 + xlab("") + ylab('Attitude Score')
+g5 <- g5 + xlab("") + ylab('Attitude Score') + coord_flip() 
+g5n <- g5 + theme(legend.position="none")
 
-# grid.arrange(g2,g3,g4, main='\nI think that it is important to learn about personalized medicine')
+g5;
 
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(4, 1, heights = unit(c(1, 4, 4,4), "null"))))
+grid.text("I think that it is important to learn about personalized medicine", vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(g2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(g3, vp = viewport(layout.pos.row = 3, layout.pos.col = 1))
+print(g4, vp = viewport(layout.pos.row = 4, layout.pos.col = 1))
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(5, 1, heights = unit(c(1, 4, 4,4,4), "null"))))
+grid.text("I think that it is important to learn about personalized medicine", vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(g2, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(g3, vp = viewport(layout.pos.row = 3, layout.pos.col = 1))
+print(g4, vp = viewport(layout.pos.row = 4, layout.pos.col = 1))
+print(g5n, vp = viewport(layout.pos.row = 5, layout.pos.col = 1))
+
+
+
+g2n <- g2 + theme(legend.position="none")
+g3n <- g3 + theme(legend.position="none")
+g4n <- g4 + theme(legend.position="none")
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(4, 2, heights = unit(c(1,4,4,1), "null"))))
+grid.text("I think that it is important to learn about personalized medicine", vp = viewport(layout.pos.row = 1, layout.pos.col = 1:2))
+print(g2n, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(g3n, vp = viewport(layout.pos.row = 2, layout.pos.col = 2))
+print(g4n, vp = viewport(layout.pos.row = 3, layout.pos.col = 1))
+print(g5n, vp = viewport(layout.pos.row = 3, layout.pos.col = 2))
+grid.rect(gp=gpar(fill="#F8766D"), vp= viewport(layout.pos.row=4, layout.pos.col=1), width=0.25, hjust=1,vjust=0.5)
+grid.text('Not at all/\nTo a slight extent/\nTo a moderate extent',
+          vp= viewport(layout.pos.row=4, layout.pos.col=1), gp=gpar(cex=0.80), hjust=-0.25,vjust=0.5)
+
+grid.rect(gp=gpar(fill="#00BFC4"), vp= viewport(layout.pos.row=4, layout.pos.col=2), width=0.25,hjust=1,vjust=0.5)
+grid.text('To a great extent/\nTo a very great extent', 
+          vp= viewport(layout.pos.row=4, layout.pos.col=2),gp=gpar(cex=0.80), hjust=-0.25,vjust=0.5)
+
+
+
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(5, 2, heights = unit(c(1,4,4,0.5,0.5), "null"))))
+grid.text("I think that it is important to learn about personalized medicine", vp = viewport(layout.pos.row = 1, layout.pos.col = 1:2))
+print(g2n, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(g3n, vp = viewport(layout.pos.row = 2, layout.pos.col = 2))
+print(g4n, vp = viewport(layout.pos.row = 3, layout.pos.col = 1))
+print(g5n, vp = viewport(layout.pos.row = 3, layout.pos.col = 2))
+
+grid.rect(gp=gpar(fill="#F8766D"), vp= viewport(layout.pos.row=4, layout.pos.col=1:2), width=0.2, hjust=2,vjust=0.5)
+grid.text('Not at all/To a slight extent/To a moderate extent',
+          vp= viewport(layout.pos.row=4, layout.pos.col=1:2), gp=gpar(cex=0.80), hjust=0.55,vjust=0.5)
+
+grid.rect(gp=gpar(fill="#00BFC4"), vp= viewport(layout.pos.row=5, layout.pos.col=1:2), width=0.2,hjust=2,vjust=0.5)
+grid.text('To a great extent/To a very great extent          ', 
+          vp= viewport(layout.pos.row=5, layout.pos.col=1:2),gp=gpar(cex=0.80), hjust=0.55,vjust=0.5)
+
+
+infile3a$`Question Response` <- as.factor(infile3a$Q9cf)
+
+g5 <- ggplot(data=infile3a, aes(x=`Question Response`, y=EBPAS))
+g5 <- g5 + geom_point(data=infile3a, aes(x=`Question Response`, y=EBPAS, color=`Question Response`),shape=15,size=0)
+g5 <- g5 + guides(color=guide_legend(title='Question Response')) 
+g5 <- g5 + theme(legend.key=element_blank())
+g5 <- g5 + guides(col=guide_legend(override.aes=list(shape=15,size=15)),title='Question Response')
+g5 <- g5 + geom_boxplot(aes(fill=factor(Q9cf)), show_guide=FALSE) 
+g5 <- g5 + scale_x_discrete(labels=c('Not at all/\nTo a slight extent/\nTo a moderate extent','To a great extent\nTo a very great extent'))
+g5a <- g5 + xlab("") + ylab('Attitude Score')
+g5a <- g5a + theme(legend.position="top")
+g5a <- g5a + scale_x_discrete(labels=NULL)
+g5a
+
+grid.newpage()
+pushViewport(viewport(layout = grid.layout(4, 2, heights = unit(c(1,4,4,4), "null"), widths=unit(c(4,2.5),"null") )))
+grid.text("I think that it is important to learn about personalized medicine", vp = viewport(layout.pos.row = 1, layout.pos.col = 1:2), gp=gpar(cex=1.5))
+print(g2n, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+print(g3n, vp = viewport(layout.pos.row = 3, layout.pos.col = 1))
+print(g4n, vp = viewport(layout.pos.row = 4, layout.pos.col = 1))
+print(g5a, vp = viewport(layout.pos.row = 2:4, layout.pos.col = 2))
+
+
+
+
+#main=textGrob("Total Data and Image", gp=gpar(cex=1), just="top")
+#grid.arrange(main,g2,g3,g4,ncol=1)#, main='\nI think that it is important to learn about personalized medicine')
+
+#multiplot(g2,g3,g4)
 #ggsave(filename="~/Dropbox/Medical Student PM Manuscript/Figures/Figure 1.png",width=12,height=9, g)
 
 ```

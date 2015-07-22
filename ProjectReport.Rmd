@@ -14,8 +14,6 @@ This analysis is conducted in R using R Markdown with Knitr for report generatio
 
 Much of the actual analysis code is omitted from being embedded in the printout of this report because it's tedious to look at along with the results. However, it is completely available in the markdown file in the Github repository (ProjectReport.Rmd).
 
-NOTE: I got tired of typing "after correction for multiple testing" in this report. All P-Values which are reported as significant in this text have undergone correction for multiple testing using either the Bonferroni, Tukey honest significant differences method, or Benjami-Hochberg method. I usually use the Bonferroni method (0.05/n tests); in one section it makes more sense to use a more elaborate method (B-H) or Tukey, and it is stated when it is used. Tukey HSD is used following significant ANOVA results.
-
 If you are trying to replicate this report, ensure the following R packages are installed and loaded:
 ```{r Call required libraries, error=FALSE,warning=FALSE,autodep=FALSE,collapse=TRUE,message=FALSE}
 library(knitr) # For report generation, not strictly necessary to run code
@@ -1485,12 +1483,12 @@ For question six's significant association with clinical year, we find that grou
 Pre-clinical students are significantly less likely to agree with the statement "I know whom to ask questions regarding genomic testing" than are either pre-clinical or clinical students. The pre-clinical and clinical groups were not significantly different from each other.
 
 ##### Question Nine:
-```{r Post-Hoc Dunn Tests for significant KW Tests Q9, echo=FALSE}
+```{r Post-Hoc Dunn Tests for significant KW Tests Q9, 30.1, echo=FALSE}
 dunn.test(x=infile3$Q9, g=as.factor(infile3$Q30.1), method="bh", alpha=0.05,wrap=FALSE)
 ddply(infile3, ~Q30.1, summarize, mean=mean(Q9, na.rm=TRUE), median=median(Q9), N=length(Q9))
 ```
 
-```{r Post-Hoc Dunn Tests for significant KW Tests Q9, echo=FALSE}
+```{r Post-Hoc Dunn Tests for significant KW Tests Q9, 28.2c, echo=FALSE}
 dunn.test(x=infile3$Q9, g=as.factor(infile3$Q28.2c), method="bh", alpha=0.05,wrap=FALSE)
 ddply(infile3, ~Q30.1, summarize, mean=mean(Q9, na.rm=TRUE), median=median(Q9), N=length(Q9))
 ```
@@ -1513,20 +1511,20 @@ Pre-didactic students are significantly less likely to agree with the statement 
 
 ```{r infile3 <- infile2}
 
-# infile3 <- mutate(infile, total1to12 = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
-# 
-# infile3$Q28.2c <- infile3$Q28.2
-# infile3$Q28.2c[infile3$Q28.2c==4] <- 3
-# clinical_grouping_table <- table(infile3$Q28.2c) 
-# 
-# infile3$Q30.1c <- infile3$Q30.1
-# infile3$Q30.1c[infile3$Q30.1c==2] <- 0
-# infile3$Q30.1c <- as.factor(infile3$Q30.1c)
-# 
-# infile3 <- mutate(infile3, EBPAS = Q1+Q2+Q4+Q5+Q7+Q8+Q10+Q12)
-# infile3 <- mutate(infile3, openness = Q1+Q7+Q10+Q12)
-# infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
-# infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
+infile3 <- mutate(infile, total1to12 = Q1+Q2+Q3+Q4+Q5+Q6+Q7+Q8+Q9+Q10+Q11+Q12)
+ 
+ infile3$Q28.2c <- infile3$Q28.2
+ infile3$Q28.2c[infile3$Q28.2c==4] <- 3
+ clinical_grouping_table <- table(infile3$Q28.2c) 
+ 
+ infile3$Q30.1c <- infile3$Q30.1
+ infile3$Q30.1c[infile3$Q30.1c==2] <- 0
+ infile3$Q30.1c <- as.factor(infile3$Q30.1c)
+ 
+ infile3 <- mutate(infile3, EBPAS = Q1+Q2+Q4+Q5+Q7+Q8+Q10+Q12)
+ infile3 <- mutate(infile3, openness = Q1+Q7+Q10+Q12)
+ infile3 <- mutate(infile3, divergence = Q2+Q4+Q5+Q8)
+ infile3 <- mutate(infile3, education = Q3+Q6+Q9+Q11)
 
 
 ```
